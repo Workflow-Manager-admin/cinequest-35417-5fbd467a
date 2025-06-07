@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getPopularMovies, isKollywoodOriginalMovie, getRomanizedTitle } from "./tmdbApi";
+import { getPopularMovies, isKollywoodOriginalMovie, getRomanizedTitle, getKollywoodOriginalMovies } from "./tmdbApi";
 
 function getSectionRegion(section) {
   return section === "kollywood" ? "IN" : "US";
@@ -16,28 +16,37 @@ export default function GameBlurredPoster({ section }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    getPopularMovies({
-      region: getSectionRegion(section),
-      language: section === "hollywood" ? "en" : "ta",
-      page: 1,
-      include_adult: false
-    })
-      .then(data => {
-        let filtered = (data.results || []).filter(
+    const fetchMovie = async () => {
+      let filtered = [];
+      if (section === "hollywood") {
+        const data = await getPopularMovies({
+          region: getSectionRegion(section),
+          language: "en",
+          page: 1,
+          include_adult: false
+        });
+        filtered = (data.results || []).filter(
           m => m.poster_path && !m.adult && m.title
         );
-        if (section === "kollywood") {
-          filtered = filtered.filter(isKollywoodOriginalMovie);
-        }
-        // Enforce maximum 18 movies for quiz session
-        if (filtered.length > 18) {
-          filtered = filtered.slice(0, 18);
-        }
-        // Pick random one
-        if (filtered.length) {
-          setMovie(filtered[Math.floor(Math.random() * filtered.length)]);
-        }
-      });
+      } else if (section === "kollywood") {
+        // Use stricter Kollywood fetch
+        const data = await getKollywoodOriginalMovies({
+          page: 1
+        });
+        filtered = (data.results || []).filter(
+          m => m.poster_path && !m.adult && m.title
+        );
+      }
+      // Enforce maximum 18 movies for quiz session
+      if (filtered.length > 18) {
+        filtered = filtered.slice(0, 18);
+      }
+      // Pick random one
+      if (filtered.length) {
+        setMovie(filtered[Math.floor(Math.random() * filtered.length)]);
+      }
+    };
+    fetchMovie();
   }, [section]);
 
   function checkGuess(e) {

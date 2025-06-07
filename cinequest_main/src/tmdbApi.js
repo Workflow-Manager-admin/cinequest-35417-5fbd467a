@@ -70,6 +70,37 @@ export async function fetchFromTMDB(endpoint, params = {}) {
 }
 
 // PUBLIC_INTERFACE
+/**
+ * getKollywoodOriginalMovies - Strictly fetch Kollywood (Tamil-original) movies using TMDB discover endpoint.
+ * @param {object} options - TMDB params, e.g., { page }
+ * @returns {Promise<object>} - Object with property "results" containing only genuine Kollywood movies.
+ */
+export async function getKollywoodOriginalMovies(options = {}) {
+  // Use /discover/movie, filter on with_original_language=ta, region=IN, no adult
+  const params = {
+    with_original_language: "ta",
+    region: "IN",
+    include_adult: false,
+    sort_by: "popularity.desc",
+    ...options
+  };
+  // To maximize spoken_languages returned, request "language=ta" for extra metadata if needed
+  const data = await fetchFromTMDB('/discover/movie', params);
+  // TMDB's spoken_languages is not always populated, so filter best effort with available fields
+  let movies = (data.results || []).filter(
+    m =>
+      m.original_language === "ta" &&
+      m.poster_path &&
+      !m.adult &&
+      m.title &&
+      (!m.title || !/dub(?:bed)?/i.test(m.title))
+  );
+  // Optionally, fetch movie details for each missing spoken_languages,
+  // But avoid extra API calls for perf (already strict by original_language).
+  return { results: movies };
+}
+
+// PUBLIC_INTERFACE
 // getMovieDetails - Fetch movie details by ID
 //
 export async function getMovieDetails(movieId, options = {}) {

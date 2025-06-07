@@ -73,41 +73,79 @@ export default function GameEmojiMovieGuess({ section }) {
     async function loadTamilQuestions() {
       setLoading(true);
       setFetchError("");
+      let clues = [];
       try {
-        // Fetch original language Tamil movies; may paginate for more variety
-        let { results } = await getKollywoodOriginalMovies({ page: 1 });
-        // Normalize all romanized TMDB titles for matching.
-        const normTitle = (str) => (str || "").replace(/^the\s+/i, "").toLowerCase();
-        // Use only those with title matching our hardcoded clues (exact match or normalized match)
-        let clues = [];
+        // Attempt to fetch original language Tamil movies with more robust pagination and TMDB mapping
+        let movies = [];
+        // Try up to 3 pages to avoid occasional empty or partial lists
+        for (let p = 1; p <= 3 && movies.length < HARDCODED_TAMIL_EMOJI_CLUES.length; ++p) {
+          try {
+            const { results } = await getKollywoodOriginalMovies({ page: p });
+            // Add only movies with poster and title, no adults, no dubbed
+            movies = movies.concat(
+              (results || []).filter(
+                (m) => m.poster_path && m.title && !m.adult && (!m.title || !/dub(?:bed)?/i.test(m.title))
+              )
+            );
+          } catch (err) {
+            // Continue on fetch errors to next page
+            continue;
+          }
+        }
+        // Remove potential duplicate IDs
+        const seenIds = new Set();
+        movies = movies.filter(m => {
+          if (seenIds.has(m.id)) return false;
+          seenIds.add(m.id);
+          return true;
+        });
+
+        // Normalize for both mapped and found movie titles (ignoring 'the', case, punctuation, etc)
+        const normTitle = (str) =>
+          (str || "").replace(/^the\s+/i, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+        // Create clues by associating the hardcoded clues with real TMDB movies
         for (let mapped of HARDCODED_TAMIL_EMOJI_CLUES) {
-          // Find in TMDB result set a movie matching by romanized title (strict: normalized equals, not just includes)
-          const match = results.find(m => {
-            let romTitle = normTitle(getRomanizedTitle(m));
-            let mappedName = normTitle(mapped.tmdb_name);
-            return romTitle === mappedName;
+          const mappedName = normTitle(mapped.tmdb_name);
+          // Find in fetched movies
+          const match = movies.find((m) => {
+            let rom = normTitle(getRomanizedTitle(m));
+            return rom === mappedName;
           });
           if (match) {
             clues.push({
               emojis: mapped.emojis,
-              // Always present as getRomanizedTitle for answer
               title: getRomanizedTitle(match)
             });
           }
         }
-        // If clues are fewer than MAX_QUESTIONS, fall back to hardcoded set as emergency fallback (avoiding empty list/game complete)
+
+        // If not enough matches from TMDB fetch, fill out with hardcoded as fallback (but never allow clues list to be empty)
         if (clues.length < 1) {
-          // Fallback: present the hardcoded clues set (at least show *something*)
           clues = HARDCODED_TAMIL_EMOJI_CLUES.map(c => ({
             emojis: c.emojis,
             title: c.tmdb_name
           }));
+        } else if (clues.length < MAX_QUESTIONS) {
+          const needed = MAX_QUESTIONS - clues.length;
+          // Shuffle and add from hardcoded not already matched by emoji/title
+          const fallbackPool = HARDCODED_TAMIL_EMOJI_CLUES.filter(
+            hc => !clues.find(c => c.emojis === hc.emojis)
+          );
+          for (let i = 0; i < Math.min(needed, fallbackPool.length); ++i) {
+            clues.push({
+              emojis: fallbackPool[i].emojis,
+              title: fallbackPool[i].tmdb_name
+            });
+          }
         }
-        // For randomness, shuffle and pick as many as possible, up to MAX_QUESTIONS.
+
+        // Shuffle clues for randomness and take up to MAX_QUESTIONS
         for (let i = clues.length - 1; i > 0; --i) {
           const j = Math.floor(Math.random() * (i + 1));
           [clues[i], clues[j]] = [clues[j], clues[i]];
         }
+
         if (!ignore) {
           setSessionSet(clues.slice(0, Math.min(MAX_QUESTIONS, clues.length)));
           setIdx(0);
@@ -121,11 +159,16 @@ export default function GameEmojiMovieGuess({ section }) {
       } catch (e) {
         if (!ignore) {
           setFetchError("Failed to load Kollywood emoji clues from TMDB.");
-          // Emergency fallback (still show the hardcoded clues, never empty)
-          const clues = HARDCODED_TAMIL_EMOJI_CLUES.map(c => ({
+          // Emergency fallback (show the hardcoded clues, never empty)
+          clues = HARDCODED_TAMIL_EMOJI_CLUES.map(c => ({
             emojis: c.emojis,
             title: c.tmdb_name
           }));
+          // Shuffle
+          for (let i = clues.length - 1; i > 0; --i) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [clues[i], clues[j]] = [clues[j], clues[i]];
+          }
           setSessionSet(clues.slice(0, Math.min(MAX_QUESTIONS, clues.length)));
           setLoading(false);
         }

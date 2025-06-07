@@ -144,7 +144,7 @@ export default function GameMovieClipQuiz({ section }) {
   const [movieDetails, setMovieDetails] = useState(null);
   const [sessionMovies, setSessionMovies] = useState([]);
   const [usedIndices, setUsedIndices] = useState([]);
-  const [backdropPath, setBackdropPath] = useState(null);
+  const [sceneImagePath, setSceneImagePath] = useState(null); // renamed for clarity (was 'backdropPath')
   const [quizPhase, setQuizPhase] = useState("scene"); // "scene" | "question"
   const [questionObj, setQuestionObj] = useState(null);
   const [userInput, setUserInput] = useState("");
@@ -161,7 +161,7 @@ export default function GameMovieClipQuiz({ section }) {
     setUsedIndices([]);
     setMovie(null);
     setMovieDetails(null);
-    setBackdropPath(null);
+    setSceneImagePath(null);
     setQuizPhase("scene");
     setFeedbackMsg("");
     setUserInput("");
@@ -200,7 +200,7 @@ export default function GameMovieClipQuiz({ section }) {
     setQuizPhase("scene");
     setMovie(null);
     setMovieDetails(null);
-    setBackdropPath(null);
+    setSceneImagePath(null);
     setFeedbackMsg("");
     setRevealed(false);
     setAutoAdvance(false);
@@ -217,9 +217,26 @@ export default function GameMovieClipQuiz({ section }) {
     getMovieDetails(pick.id, { append_to_response: "images,credits" }).then(det => {
       setMovie(pick);
       setMovieDetails(det);
-      // Get best backdrop
-      const bestBg = det.images?.backdrops ? getBestBackdrop(det.images.backdrops) : null;
-      setBackdropPath(bestBg);
+
+      // Get a scene (still/backdrop) image (prefer TMDB's backdrops, else fallback to backdrop_path, else fallback placeholder)
+      let scenePath = null;
+
+      // Try getting a random or best backdrop (scene/still)
+      if (det.images && Array.isArray(det.images.backdrops) && det.images.backdrops.length > 0) {
+        // Select at random or the largest image
+        const nonLogo = det.images.backdrops.filter(b => !b.file_path?.includes("logo"));
+        const selectedBackdrop = nonLogo.length > 0
+          ? pickOne(nonLogo)
+          : pickOne(det.images.backdrops);
+        scenePath = selectedBackdrop?.file_path || null;
+      }
+
+      // If no images/backdrops found, try the standard backdrop_path at least
+      if (!scenePath && det.backdrop_path) {
+        scenePath = det.backdrop_path;
+      }
+
+      setSceneImagePath(scenePath);
       setWaiting(false);
 
       // Show scene for 5s, then question phase
@@ -322,9 +339,9 @@ export default function GameMovieClipQuiz({ section }) {
                   background: "#eee"
                 }}
               >
-                {backdropPath ? (
+                {sceneImagePath ? (
                   <img
-                    src={`https://image.tmdb.org/t/p/w780${backdropPath}`}
+                    src={`https://image.tmdb.org/t/p/w780${sceneImagePath}`}
                     alt="Movie Scene"
                     style={{ width: 400, height: 220, objectFit: "cover", display: "block" }}
                   />

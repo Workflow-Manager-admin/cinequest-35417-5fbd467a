@@ -24,7 +24,7 @@ function getInitials(str) {
 
 // PUBLIC_INTERFACE
 export default function GameBlurredPoster({ section }) {
-  // For the list of movies for the game session
+  // -- Score and unique movies (session state) --
   const [movie, setMovie] = useState(null);
   const [movieDetails, setMovieDetails] = useState(null); // extra details for clues
   const [guess, setGuess] = useState("");
@@ -36,23 +36,15 @@ export default function GameBlurredPoster({ section }) {
   const [showClue2, setShowClue2] = useState(false);
   const [loading, setLoading] = useState(false);
   const [nextPending, setNextPending] = useState(false);
+  const [score, setScore] = useState(0);
+  const [usedMovies, setUsedMovies] = useState([]); // store TMDB IDs
+  const [movieSet, setMovieSet] = useState([]); // 18 unique per session
+  const [questionNumber, setQuestionNumber] = useState(1); // 1-based
   const navigate = useNavigate();
   const timeoutRef = useRef();
 
-  // Fetch a random movie
-  async function fetchNewPoster() {
-    setMovie(null);
-    setMovieDetails(null);
-    setShowClue1(false);
-    setShowClue2(false);
-    setClue1("");
-    setClue2("");
-    setMsg("");
-    setGuess("");
-    setRevealed(false);
-    setLoading(true);
-    setNextPending(false);
-
+  // Build an array of 18 unique movies for the session
+  async function buildUniqueMovieSet() {
     let filtered = [];
     if (section === "hollywood") {
       const data = await getPopularMovies({
@@ -72,22 +64,79 @@ export default function GameBlurredPoster({ section }) {
         (m) => m.poster_path && !m.adult && m.title
       );
     }
-    // Enforce maximum 18 unique movies for quiz session:
-    if (filtered.length > 18) {
-      // Shuffle and pick 18 random if more than 18
-      filtered = filtered
-        .map((v) => ({ v, sort: Math.random() }))
-        .sort((a, b) => a.sort - b.sort)
-        .map(({ v }) => v)
-        .slice(0, 18);
+    // Shuffle and pick unique 18 movies (fewer if less available)
+    // Avoid duplicates by TMDB id or poster_path
+    let unique = [];
+    const seenIds = new Set();
+    for (let m of filtered) {
+      if (!seenIds.has(m.id) && (!m.adult) && m.title && m.poster_path) {
+        unique.push(m);
+        seenIds.add(m.id);
+      }
+      if (unique.length >= 18) break;
     }
-    let pick = null;
-    if (filtered.length) {
-      pick = filtered[Math.floor(Math.random() * filtered.length)];
-      setMovie(pick);
+    return unique;
+  }
+
+  // Fetch a random unused movie from set for current question
+  function pickNextMovie(moviesList, usedIds) {
+    // Pick random from those not yet used this session
+    const available = moviesList.filter((m) => !usedIds.includes(m.id));
+    if (available.length === 0) {
+      return null;
+    }
+    // Randomize pick
+    return available[Math.floor(Math.random() * available.length)];
+  }
+
+  // PUBLIC_INTERFACE: SESSION GAME INIT & NEXT
+  async function fetchNewPoster(isStart = false) {
+    setMovie(null);
+    setMovieDetails(null);
+    setShowClue1(false);
+    setShowClue2(false);
+    setClue1("");
+    setClue2("");
+    setMsg("");
+    setGuess("");
+    setRevealed(false);
+    setLoading(true);
+    setNextPending(false);
+
+    // -- On first call (or section change), build unique set and use first movie --
+    if (isStart || movieSet.length === 0) {
+      const uniqueMovies = await buildUniqueMovieSet();
+      setMovieSet(uniqueMovies);
+      setUsedMovies([]); // reset session
+      setScore(0);
+      setQuestionNumber(1);
+      if (uniqueMovies.length === 0) {
+        setMsg("No available movies for this game section!");
+        setMovie(null);
+        setLoading(false);
+        return null;
+      }
+      // Pick a random first movie and set used
+      const firstIdx = Math.floor(Math.random() * uniqueMovies.length);
+      setMovie(uniqueMovies[firstIdx]);
+      setUsedMovies([uniqueMovies[firstIdx].id]);
+      setLoading(false);
+      return uniqueMovies[firstIdx];
+    }
+
+    // -- For subsequent calls, pick new unused movie, advance quiz --
+    const nextMovie = pickNextMovie(movieSet, usedMovies);
+    if (nextMovie) {
+      setMovie(nextMovie);
+      setUsedMovies((prev) => [...prev, nextMovie.id]);
+      setQuestionNumber((n) => n + 1);
+    } else {
+      // All movies used; end session
+      setMovie(null);
+      setMsg("🎉 Game complete! Final Score: " + score + " / " + usedMovies.length);
     }
     setLoading(false);
-    return pick;
+    return nextMovie;
   }
 
   // Fetch more details for clues when movie changes
@@ -108,7 +157,7 @@ export default function GameBlurredPoster({ section }) {
 
   // Initial fetch on mount or section change
   useEffect(() => {
-    fetchNewPoster();
+    fetchNewPoster(true);
     return () => clearTimeout(timeoutRef.current);
     // eslint-disable-next-line
   }, [section]);
@@ -117,7 +166,10 @@ export default function GameBlurredPoster({ section }) {
   function triggerNextPoster(delay = 1600) {
     setNextPending(true);
     timeoutRef.current = setTimeout(() => {
-      fetchNewPoster();
+      // Only move to next if we haven't finished all
+      if (usedMovies.length < movieSet.length) {
+        fetchNewPoster();
+      }
     }, delay);
   }
 
@@ -132,8 +184,9 @@ export default function GameBlurredPoster({ section }) {
       .replace(/[^a-z0-9]/gi, "");
     const userGuess = guess.toLowerCase().replace(/[^a-z0-9]/gi, "");
     if (correct === userGuess) {
-      setMsg("🎉 Correct! This is " + answer);
+      setMsg(<span style={{ color: "#000", fontWeight: 600 }}>correct</span>);
       setRevealed(true);
+      setScore((s) => s + 1);
       triggerNextPoster();
     } else {
       setMsg("❌ Incorrect guess.");
@@ -227,8 +280,20 @@ export default function GameBlurredPoster({ section }) {
         ← Back
       </button>
       <h2 style={{ color: "#d505ff" }}>Blurred Poster Guessing</h2>
-      {loading || !movie ? (
-        <div>Loading...</div>
+      {/* Show score / question counter */}
+      <div style={{
+        margin: "8px 0 22px 0",
+        color: "#101",
+        fontSize: 18,
+        textAlign: "center",
+        fontWeight: 500
+      }}>
+        Score: {score} &nbsp; | &nbsp; Question: {movieSet.length ? Math.min(questionNumber, movieSet.length) : 1} / {movieSet.length || 18}
+      </div>
+      {(loading || !movie) ? (
+        <div>
+          {msg ? msg : "Loading..."}
+        </div>
       ) : (
         <div style={{ textAlign: "center", marginBottom: 30 }}>
           <div
@@ -359,10 +424,35 @@ export default function GameBlurredPoster({ section }) {
               </div>
             )}
           </div>
-          <div style={{ marginTop: 18, minHeight: 24 }}>{msg}</div>
+          <div style={{ marginTop: 18, minHeight: 24 }}>
+            {/* Show message: support "correct" in black font */}
+            {typeof msg === "string"
+              ? msg
+              : msg}
+          </div>
           {nextPending && (
             <div style={{ marginTop: 12, color: "#999" }}>Next poster coming…</div>
           )}
+          {/* On game completion, show reset button? */}
+          {movie === null && usedMovies.length === movieSet.length && (
+              <div>
+                <div style={{ color: "#0d0d0d", fontWeight: 700, margin: "16px 0" }}>
+                  Quiz Complete! Final Score: {score} / {movieSet.length}
+                </div>
+                <button
+                  className="btn"
+                  style={{
+                    background: "#f3e7fa",
+                    color: "#d505ff",
+                    fontWeight: 600,
+                    border: "1px solid #d505ff69"
+                  }}
+                  onClick={() => fetchNewPoster(true)}
+                >
+                  Play Again
+                </button>
+              </div>
+            )}
         </div>
       )}
     </div>

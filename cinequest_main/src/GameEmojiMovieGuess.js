@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { getKollywoodOriginalMovies, getRomanizedTitle } from "./tmdbApi";
+import BackButton from "./BackButton";
 
 // Demo data: Each question has a set of emojis and the movie title as answer
 const EMOJI_QUESTIONS = [
@@ -286,21 +287,8 @@ export default function GameEmojiMovieGuess({ section }) {
 
   // Main render logic
   return (
-    <div className="container" style={{ marginTop: 100 }}>
-      <button
-        className="btn"
-        style={{
-          background: "#f1e4fa",
-          color: "#d505ff",
-          border: "1px solid #d505ff55",
-          marginBottom: 18,
-          fontWeight: 600
-        }}
-        onClick={() => navigate("/section")}
-        disabled={autoAdvance || loading}
-      >
-        ← Back
-      </button>
+    <div className="container" style={{ marginTop: 100, position: "relative" }}>
+      <BackButton disabled={autoAdvance || loading} />
       <h2 style={{ color: "#d505ff" }}>Guess the Movie from the Emoji</h2>
       <div style={{
         margin: "8px 0 14px 0", color: "#101",

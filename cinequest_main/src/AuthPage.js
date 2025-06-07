@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { useNavigate } from "react-router-dom";
-
+import BackButton from "./BackButton";
 // PUBLIC_INTERFACE
 export default function AuthPage() {
   const { login, signup, user } = useAuth();
@@ -38,8 +38,10 @@ export default function AuthPage() {
       minHeight: "60vh",
       display: "flex",
       alignItems: "center",
-      justifyContent: "center"
+      justifyContent: "center",
+      position: "relative"
     }}>
+      <BackButton style={{ top: 25, left: 18 }} />
       <div style={{
         background: "#fff",
         color: "#0d0d0d",

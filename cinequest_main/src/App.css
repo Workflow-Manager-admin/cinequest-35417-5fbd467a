@@ -9,6 +9,28 @@
   --popcorn-highlight: #fdedab;
   --spotlight-fade: rgba(255, 223, 58, 0.28);
 }
+/* Back button universal style for consistent unobtrusive placement */
+.cq-back-btn {
+  position: absolute;
+  top: 18px;
+  left: 10px;
+  z-index: 40;
+  min-width: 0;
+  padding: 6px 18px 6px 14px;
+  background: #fff;
+  color: #d505ff;
+  border: 1px solid #d505ff55;
+  font-weight: 700;
+  border-radius: 22px;
+  font-size: 17px;
+  box-shadow: 0 2px 8px #d505ff13;
+  opacity: 1;
+  transition: opacity 0.14s;
+}
+.cq-back-btn[disabled] {
+  opacity: 0.5;
+  pointer-events: none;
+}
 
 body {
   margin: 0;

@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-
+import BackButton from "./BackButton";
 // PUBLIC_INTERFACE
 export default function SectionPage({ section }) {
   const navigate = useNavigate();
@@ -32,6 +32,7 @@ export default function SectionPage({ section }) {
 
   return (
     <div className="container" style={{ marginTop: 100, position: "relative" }}>
+      <BackButton />
       {/* Section/game selection interface */}
       <div style={{ fontSize: 26, fontWeight: 700, color: "#d505ff" }}>
         {section === "hollywood" ? "Hollywood" : "Kollywood"} Section

@@ -7,6 +7,7 @@ import {
   getKollywoodOriginalMovies,
   getMovieDetails,
 } from "./tmdbApi";
+import BackButton from "./BackButton";
 
 function getSectionRegion(section) {
   return section === "kollywood" ? "IN" : "US";
@@ -264,21 +265,8 @@ export default function GameBlurredPoster({ section }) {
   }, [movie]);
 
   return (
-    <div className="container" style={{ marginTop: 100 }}>
-      <button
-        className="btn"
-        style={{
-          background: "#f1e4fa",
-          color: "#d505ff",
-          border: "1px solid #d505ff55",
-          marginBottom: 18,
-          fontWeight: 600,
-        }}
-        onClick={() => navigate("/section")}
-        disabled={loading}
-      >
-        ← Back
-      </button>
+    <div className="container" style={{ marginTop: 100, position: "relative" }}>
+      <BackButton disabled={loading} />
       <h2 style={{ color: "#d505ff" }}>Blurred Poster Guessing</h2>
       {/* Show score / question counter */}
       <div style={{

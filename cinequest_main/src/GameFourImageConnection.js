@@ -6,6 +6,7 @@ import {
   getRomanizedTitle,
   getKollywoodOriginalMovies
 } from "./tmdbApi";
+import BackButton from "./BackButton";
 
 // Max questions per session
 const MAX_QUESTIONS = 15;
@@ -195,21 +196,8 @@ export default function GameFourImageConnection({ section }) {
   const q = questions[currentIndex];
 
   return (
-    <div className="container" style={{ marginTop: 100 }}>
-      <button
-        className="btn"
-        style={{
-          background: "#f1e4fa",
-          color: "#d505ff",
-          border: "1px solid #d505ff55",
-          marginBottom: 18,
-          fontWeight: 600,
-        }}
-        onClick={() => navigate("/section")}
-        disabled={loading}
-      >
-        ← Back
-      </button>
+    <div className="container" style={{ marginTop: 100, position: "relative" }}>
+      <BackButton disabled={loading} />
       <h2 style={{ color: "#d505ff" }}>4-Image Connection Game</h2>
       {/* Progress bar / stepper */}
       <div style={{

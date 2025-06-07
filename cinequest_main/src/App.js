@@ -61,7 +61,7 @@ function HomePage() {
           display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 6,
         }}>
           <CinemaScreenSVG size={52} style={{ opacity: 0.91 }}/>
-          <div className="subtitle">The Movie Game Platform</div>
+          <div className="subtitle" style={{ color: "#d505ff" }}>The Movie Game Platform</div>
           <FilmReelSVG size={32} style={{ marginLeft: 10, marginBottom: 6, opacity: 0.94 }}/>
         </div>
         <h1 className="title" style={{color: "#d505ff", letterSpacing: "-2px", fontWeight: 700}}>

@@ -160,33 +160,42 @@ function generateHardQuestions(movieDetails, section) {
 
 const MAX_QUESTIONS = 15;
 
-// Helper: Build 15 unique movies for session (no repeats)
-async function fetchSessionMovies(section) {
+/**
+ * Fetch session movies WITH available backdrops only.
+ * Only include movies where at least one backdrop image exists.
+ */
+async function fetchSessionMoviesWithBackdrop(section) {
+  let data, movies = [];
   if (section === "kollywood") {
-    const data = await getKollywoodOriginalMovies({ page: 1 });
-    let movies = (data.results || []).filter(m => m.title && m.poster_path);
-    // Deduplicate by id
-    const seen = new Set();
-    movies = movies.filter(m => {
-      if (seen.has(m.id)) return false;
-      seen.add(m.id);
-      return true;
-    });
-    if (movies.length > MAX_QUESTIONS) movies = shuffleArray(movies).slice(0, MAX_QUESTIONS);
-    return movies;
+    data = await getKollywoodOriginalMovies({ page: 1 });
   } else {
-    const data = await getPopularMovies({ region: "US", language: "en", include_adult: false });
-    let movies = (data.results || []).filter(m => m.title && m.poster_path);
-    // Deduplicate by id
-    const seen = new Set();
-    movies = movies.filter(m => {
-      if (seen.has(m.id)) return false;
-      seen.add(m.id);
-      return true;
-    });
-    if (movies.length > MAX_QUESTIONS) movies = shuffleArray(movies).slice(0, MAX_QUESTIONS);
-    return movies;
+    data = await getPopularMovies({ region: "US", language: "en", include_adult: false });
   }
+  // Only take unique movies with id/title/poster
+  const seen = new Set();
+  const filtered = (data.results || []).filter(m => {
+    if (!m.title || !m.poster_path || seen.has(m.id)) return false;
+    seen.add(m.id);
+    return true;
+  });
+  // Fetch details to check for at least one backdrop
+  let moviesWithScenes = [];
+  for (let i = 0; i < filtered.length && moviesWithScenes.length < MAX_QUESTIONS * 2; ++i) {
+    try {
+      const details = await getMovieDetails(filtered[i].id, { append_to_response: "images" });
+      const hasBackdrop = details?.images?.backdrops?.length > 0;
+      if (hasBackdrop) {
+        moviesWithScenes.push({
+          movie: filtered[i],
+          details: details,
+          scenePath: pickRandomBackdrop(details.images.backdrops)
+        });
+      }
+      // Stop early if we've gathered enough
+      if (moviesWithScenes.length >= MAX_QUESTIONS) break;
+    } catch { /* skip this entry if it errors */ }
+  }
+  return moviesWithScenes.slice(0, MAX_QUESTIONS);
 }
 
 // PUBLIC_INTERFACE
@@ -218,37 +227,26 @@ export default function GameMovieClipQuiz({ section }) {
     setRevealed(false);
     setAutoAdvance(false);
 
-    // Build up quizList array: for each movie, build its {movie, details, questionObj, scenePath}
+    // Build up quizList array: each with movie, details, question, and guaranteed scenePath
     async function buildQuizList() {
-      const movies = await fetchSessionMovies(section);
+      const sceneMovies = await fetchSessionMoviesWithBackdrop(section);
       const quizzes = [];
-      for (let i = 0; i < movies.length; ++i) {
-        try {
-          // include images and credits
-          const details = await getMovieDetails(movies[i].id, { append_to_response: "images,credits" });
-          // Pick harder/random scene still
-          let scenePath = null;
-          if (details.images && Array.isArray(details.images.backdrops) && details.images.backdrops.length > 0) {
-            scenePath = pickRandomBackdrop(details.images.backdrops);
-          } else if (details.backdrop_path) {
-            scenePath = details.backdrop_path;
-          }
-          // Get a hard question for this round
-          const qs = generateHardQuestions(details, section);
-          // fallback if somehow no hard questions
-          const questionObj = qs.length ? qs[0] : {
-            question: "What is the title of this movie?",
-            answer: section === "kollywood" ? getRomanizedTitle(details) : details.title
-          };
-          quizzes.push({
-            movie: movies[i],
-            details: details,
-            questionObj,
-            scenePath
-          });
-        } catch {
-          // Skip this movie if bad data
-        }
+      for (let i = 0; i < sceneMovies.length && quizzes.length < MAX_QUESTIONS; ++i) {
+        const { movie, details, scenePath } = sceneMovies[i];
+        if (!scenePath) continue; // safeguard (shouldn't happen)
+        // Get a hard question for this round
+        const qs = generateHardQuestions(details, section);
+        // fallback: basic question using this movie/scene
+        const questionObj = qs.length ? qs[0] : {
+          question: "What is the title of this movie?",
+          answer: section === "kollywood" ? getRomanizedTitle(details) : details.title
+        };
+        quizzes.push({
+          movie,
+          details,
+          questionObj,
+          scenePath
+        });
       }
       setQuizList(quizzes.slice(0, MAX_QUESTIONS));
       setWaiting(false);

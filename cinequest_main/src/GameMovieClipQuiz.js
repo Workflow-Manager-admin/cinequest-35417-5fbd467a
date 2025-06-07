@@ -41,64 +41,68 @@ function shuffleArray(arr) {
 
 /**
  * PUBLIC_INTERFACE
- * Generates a quiz question exclusively about ONE of:
- * (1) the main character's name,
- * (2) the movie's name,
- * (3) the movie's director.
- * Data are always sourced directly from TMDB for the selected movie.
- * If any information is missing, falls back to another available type among these three.
+ * For a shown movie scene, generates a single randomly chosen question of these types:
+ * (1) "What is the name of the character?" — answer is main character's name (first from TMDB cast.character)
+ * (2) "Who is the director?" — answer is director's real name from TMDB crew
+ * (3) "Who is the hero?" — answer is main actor's real name (first from TMDB cast.name)
+ *
+ * All answers are pulled directly from the TMDB data for the shown scene/movie.
+ * If a field is unavailable, rotate to another available type among these three, prioritized randomly.
  */
-function generateCoreMovieQuestionsOnly(movieDetails, section) {
-  if (!movieDetails) return [];
-  const questions = [];
-  // (b) Movie title (name)
-  const title = section === "kollywood"
-    ? getRomanizedTitle(movieDetails)
-    : movieDetails.title;
-  if (title) {
-    questions.push({
-      question: "What is the name of the movie?",
-      answer: title,
-      type: "movie-title"
-    });
-  }
-  // (a) Main character name, from main cast (prefer lead role with actual character name)
+function generateSceneQuizQuestion(movieDetails, section) {
+  if (!movieDetails) return null;
+  let questionTypes = [];
+
+  // (1) Main character's name (first cast entry with proper "character" value)
+  let mainCharacter = null;
   if (
     movieDetails.credits &&
     Array.isArray(movieDetails.credits.cast) &&
     movieDetails.credits.cast.length > 0
   ) {
-    // Prefer first credited with proper character name
-    const mainCharacter = movieDetails.credits.cast.find(
+    mainCharacter = movieDetails.credits.cast.find(
       m =>
         m.character &&
         m.character.length > 1 &&
         !/^Self|Himself|Herself$/i.test(m.character)
     );
     if (mainCharacter && mainCharacter.character) {
-      questions.push({
-        question: "What is the main character name?",
-        answer: mainCharacter.character,
-        type: "main-character"
+      questionTypes.push({
+        type: "main-character",
+        question: "What is the name of the character?",
+        answer: mainCharacter.character
+      });
+    }
+    // (3) Hero = main actor's real name (first in cast)
+    if (movieDetails.credits.cast[0] && movieDetails.credits.cast[0].name) {
+      questionTypes.push({
+        type: "hero",
+        question: "Who is the hero?",
+        answer: movieDetails.credits.cast[0].name
       });
     }
   }
-  // (c) Director name
+
+  // (2) Director
   if (
     movieDetails.credits &&
     Array.isArray(movieDetails.credits.crew)
   ) {
     const director = movieDetails.credits.crew.find(c => c.job === "Director");
     if (director && director.name) {
-      questions.push({
-        question: "Who is the director of this movie?",
-        answer: director.name,
-        type: "director"
+      questionTypes.push({
+        type: "director",
+        question: "Who is the director?",
+        answer: director.name
       });
     }
   }
-  // Always shuffle for variety/rotation
-  return shuffleArray(questions);
+
+  // If none available, return null (safeguard)
+  if (questionTypes.length === 0) return null;
+
+  // Pick one randomly
+  return questionTypes[Math.floor(Math.random() * questionTypes.length)];
 }
 
 const MAX_QUESTIONS = 15;
@@ -177,16 +181,10 @@ export default function GameMovieClipQuiz({ section }) {
       for (let i = 0; i < sceneMovies.length && quizzes.length < MAX_QUESTIONS; ++i) {
         const { movie, details, scenePath } = sceneMovies[i];
         if (!scenePath) continue; // safeguard (shouldn't happen)
-        // [Changed]: Restrict to core question types (name, character, director)
-        const qs = generateCoreMovieQuestionsOnly(details, section);
-        // If >1, rotate questions, otherwise fallback to movie name
-        const questionObj = qs.length
-          ? qs[0]
-          : {
-              question: "What is the name of the movie?",
-              answer: section === "kollywood" ? getRomanizedTitle(details) : details.title,
-              type: "movie-title"
-            };
+        // Each question: randomly from character, director, or hero
+        const questionObj = generateSceneQuizQuestion(details, section);
+        // If not available (shouldn't happen), fallback to next
+        if (!questionObj) continue;
         quizzes.push({
           movie,
           details,

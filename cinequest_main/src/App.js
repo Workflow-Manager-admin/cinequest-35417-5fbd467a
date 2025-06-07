@@ -135,25 +135,56 @@ function SectionChoicePage() {
   return (
     <div className="container" style={{marginTop: 100, textAlign:"center"}}>
       <h2 style={{color: "#d505ff"}}>Choose Your Section</h2>
-      <div style={{display:"flex", gap:50, justifyContent:"center", marginTop:28}}>
-        <button className="btn btn-large"
+      <div
+        style={{
+          display: "flex",
+          gap: 42,
+          justifyContent: "center",
+          marginTop: 28,
+          width: "100%",
+          maxWidth: 620,
+          marginLeft: "auto",
+          marginRight: "auto",
+        }}
+      >
+        <button
+          className="btn btn-large section-select-btn"
           style={{
             background: "#d505ff",
             color: "#fff",
             fontWeight: 600,
-            borderRadius: 8,
+            borderRadius: 16,
+            minHeight: 88,
+            flex: "1 1 0",
+            fontSize: "2rem",
+            boxShadow: "0 4px 32px #d505ff13",
+            letterSpacing: "0.01em",
+            padding: "30px 0",
+            transition: "box-shadow 0.19s, transform 0.13s",
           }}
           onClick={() => navigate("/hollywood")}
-        >Hollywood</button>
-        <button className="btn btn-large"
+        >
+          Hollywood
+        </button>
+        <button
+          className="btn btn-large section-select-btn"
           style={{
             background: "#d505ff",
             color: "#fff",
             fontWeight: 600,
-            borderRadius: 8,
+            borderRadius: 16,
+            minHeight: 88,
+            flex: "1 1 0",
+            fontSize: "2rem",
+            boxShadow: "0 4px 32px #d505ff13",
+            letterSpacing: "0.01em",
+            padding: "30px 0",
+            transition: "box-shadow 0.19s, transform 0.13s",
           }}
           onClick={() => navigate("/kollywood")}
-        >Kollywood</button>
+        >
+          Kollywood
+        </button>
       </div>
     </div>
   );

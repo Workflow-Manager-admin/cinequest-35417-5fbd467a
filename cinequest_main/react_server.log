@@ -2,93 +2,11 @@
 > react-kavia@0.1.0 start
 > react-scripts start
 
-(node:5586) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(node:15922) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
 (Use `node --trace-deprecation ...` to show where the warning was created)
-(node:5586) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(node:15922) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
 Starting the development server...
 
-Compiled successfully!
-
-You can now view react-kavia in the browser.
-
-  Local:            http://localhost:3000
-  On Your Network:  http://172.17.0.2:3000
-
-Note that the development build is not optimized.
-To create a production build, use npm run build.
-
-webpack compiled successfully
-Compiling...
-Failed to compile.
-
-Module not found: Error: Can't resolve 'react-router-dom' in '/home/kavia/workspace/code-generation/cinequest-35417-5fbd467a/cinequest_main/src'
-WARNING in [eslint] 
-src/AuthContext.js
-  Line 1:54:  'useEffect' is defined but never used  no-unused-vars
-
-src/AuthPage.js
-  Line 86:17:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
-  Line 90:17:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
-
-src/GameDirectorsMovies.js
-  Line 2:28:   'getPersonDetails' is defined but never used       no-unused-vars
-  Line 2:46:   'getPersonMovieCredits' is defined but never used  no-unused-vars
-  Line 95:11:  'chosen' is assigned a value but never used        no-unused-vars
-
-src/GameFourImageConnection.js
-  Line 24:10:  'getSectionMovies' is defined but never used  no-unused-vars
-
-src/GameMovieClipQuiz.js
-  Line 26:10:  'movie' is assigned a value but never used  no-unused-vars
-
-ERROR in ./src/App.js 9:0-97
-Module not found: Error: Can't resolve 'react-router-dom' in '/home/kavia/workspace/code-generation/cinequest-35417-5fbd467a/cinequest_main/src'
-
-ERROR in ./src/Navbar.js 7:0-60
-Module not found: Error: Can't resolve 'react-router-dom' in '/home/kavia/workspace/code-generation/cinequest-35417-5fbd467a/cinequest_main/src'
-
-ERROR in ./src/SectionPage.js 6:0-47
-Module not found: Error: Can't resolve 'react-router-dom' in '/home/kavia/workspace/code-generation/cinequest-35417-5fbd467a/cinequest_main/src'
-
-webpack compiled with 3 errors and 1 warning
-Compiling...
-Failed to compile.
-
-Module not found: Error: Can't resolve 'react-router-dom' in '/home/kavia/workspace/code-generation/cinequest-35417-5fbd467a/cinequest_main/src'
-LOG from webpack.FileSystemInfo
-<w> Managed item /home/kavia/workspace/code-generation/cinequest-35417-5fbd467a/cinequest_main/node_modules/react-router-dom isn't a directory or doesn't contain a package.json (see snapshot.managedPaths option)
-+ 13 hidden lines
-
-WARNING in [eslint] 
-src/AuthContext.js
-  Line 1:54:  'useEffect' is defined but never used  no-unused-vars
-
-src/AuthPage.js
-  Line 86:17:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
-  Line 90:17:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
-
-src/GameDirectorsMovies.js
-  Line 2:28:   'getPersonDetails' is defined but never used       no-unused-vars
-  Line 2:46:   'getPersonMovieCredits' is defined but never used  no-unused-vars
-  Line 95:11:  'chosen' is assigned a value but never used        no-unused-vars
-
-src/GameFourImageConnection.js
-  Line 24:10:  'getSectionMovies' is defined but never used  no-unused-vars
-
-src/GameMovieClipQuiz.js
-  Line 26:10:  'movie' is assigned a value but never used  no-unused-vars
-
-ERROR in ./src/App.js 9:0-97
-Module not found: Error: Can't resolve 'react-router-dom' in '/home/kavia/workspace/code-generation/cinequest-35417-5fbd467a/cinequest_main/src'
-
-ERROR in ./src/Navbar.js 7:0-60
-Module not found: Error: Can't resolve 'react-router-dom' in '/home/kavia/workspace/code-generation/cinequest-35417-5fbd467a/cinequest_main/src'
-
-ERROR in ./src/SectionPage.js 6:0-47
-Module not found: Error: Can't resolve 'react-router-dom' in '/home/kavia/workspace/code-generation/cinequest-35417-5fbd467a/cinequest_main/src'
-
-webpack compiled with 3 errors and 1 warning
-Compiling...
 Compiled with warnings.
 
 [eslint] 
@@ -141,8 +59,8 @@ src/AuthContext.js
   Line 1:54:  'useEffect' is defined but never used  no-unused-vars
 
 src/AuthPage.js
-  Line 86:17:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
-  Line 90:17:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 96:17:   The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 100:17:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
 
 src/GameDirectorsMovies.js
   Line 2:28:   'getPersonDetails' is defined but never used       no-unused-vars
@@ -163,8 +81,8 @@ src/AuthContext.js
   Line 1:54:  'useEffect' is defined but never used  no-unused-vars
 
 src/AuthPage.js
-  Line 86:17:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
-  Line 90:17:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 96:17:   The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 100:17:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
 
 src/GameDirectorsMovies.js
   Line 2:28:   'getPersonDetails' is defined but never used       no-unused-vars

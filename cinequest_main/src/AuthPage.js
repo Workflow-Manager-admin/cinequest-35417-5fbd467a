@@ -1,13 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
+import { useNavigate } from "react-router-dom";
 
 // PUBLIC_INTERFACE
 export default function AuthPage() {
-  const { login, signup } = useAuth();
+  const { login, signup, user } = useAuth();
   const [mode, setMode] = useState("login");
   const [username, setUsername] = useState("");
   const [pw, setPw] = useState("");
   const [error, setError] = useState("");
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Automatically redirect on login/signup success
+    if (user) {
+      navigate("/section", { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleSubmit = e => {
     e.preventDefault();
@@ -18,6 +27,7 @@ export default function AuthPage() {
     }
     try {
       mode === "login" ? login(username, pw) : signup(username, pw);
+      // navigation is handled by useEffect watching user
     } catch (err) {
       setError(err.message || "Error on authentication.");
     }

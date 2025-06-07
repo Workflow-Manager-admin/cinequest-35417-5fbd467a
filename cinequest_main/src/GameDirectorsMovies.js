@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getPopularMovies, getPersonDetails, getPersonMovieCredits, isKollywoodOriginalMovie, getRomanizedTitle } from "./tmdbApi";
 
 // Demo directors: for each section, a notable director (name, TMDB id, sample correct movies)
@@ -30,12 +31,13 @@ const distractorPopularMovies = {
   kollywood: ["Baahubali", "Sivaji", "Kabali", "Enthiran"]
 };
 
-// PUBLIC_INTERFACE
+ // PUBLIC_INTERFACE
 export default function GameDirectorsMovies({ section }) {
   const [director, setDirector] = useState(null);
   const [movies, setMovies] = useState([]); // array of { title, poster_path, isCorrect }
   const [choice, setChoice] = useState([]);
   const [resultMsg, setResultMsg] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Pick demo director for section
@@ -123,6 +125,19 @@ export default function GameDirectorsMovies({ section }) {
 
   return (
     <div className="container" style={{ marginTop: 100 }}>
+      <button
+        className="btn"
+        style={{
+          background: "#f1e4fa",
+          color: "#d505ff",
+          border: "1px solid #d505ff55",
+          marginBottom: 18,
+          fontWeight: 600,
+        }}
+        onClick={() => navigate(-1)}
+      >
+        ← Back
+      </button>
       <h2 style={{ color: "#d505ff" }}>Director's Movies Game</h2>
       {!director ? (
         <div>Loading…</div>

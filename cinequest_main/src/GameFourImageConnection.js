@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getPopularMovies, getRomanizedTitle } from "./tmdbApi";
 
 const conceptClues = [
@@ -32,11 +33,12 @@ function getSectionMovies(section, cb) {
   });
 }
 
-// PUBLIC_INTERFACE
+ // PUBLIC_INTERFACE
 export default function GameFourImageConnection({ section }) {
   const [current, setCurrent] = useState(null);
   const [userGuess, setUserGuess] = useState("");
   const [msg, setMsg] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Pick random from concept clues of section (use .title)
@@ -67,6 +69,19 @@ export default function GameFourImageConnection({ section }) {
 
   return (
     <div className="container" style={{ marginTop: 100 }}>
+      <button
+        className="btn"
+        style={{
+          background: "#f1e4fa",
+          color: "#d505ff",
+          border: "1px solid #d505ff55",
+          marginBottom: 18,
+          fontWeight: 600,
+        }}
+        onClick={() => navigate(-1)}
+      >
+        ← Back
+      </button>
       <h2 style={{ color: "#d505ff" }}>4-Image Connection Game</h2>
       {!current ? (
         <div>Loading Question…</div>

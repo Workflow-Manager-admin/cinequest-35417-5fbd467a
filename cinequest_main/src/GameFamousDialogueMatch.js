@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getPopularMovies, getRomanizedTitle } from "./tmdbApi";
 
 const dialogueDataset = [
@@ -34,6 +35,7 @@ export default function GameFamousDialogueMatch({ section }) {
   const [picked, setPicked] = useState("");
   const [resultMsg, setResultMsg] = useState("");
   const [movieImages, setMovieImages] = useState({}); // movie: poster_path
+  const navigate = useNavigate();
 
   useEffect(() => {
     const choices = getSectionChoices(section);
@@ -85,6 +87,19 @@ export default function GameFamousDialogueMatch({ section }) {
 
   return (
     <div className="container" style={{ marginTop: 100 }}>
+      <button
+        className="btn"
+        style={{
+          background: "#f1e4fa",
+          color: "#d505ff",
+          border: "1px solid #d505ff55",
+          marginBottom: 18,
+          fontWeight: 600,
+        }}
+        onClick={() => navigate(-1)}
+      >
+        ← Back
+      </button>
       <h2 style={{ color: "#d505ff" }}>Famous Dialogue Match</h2>
       {!pair ? (
         <div>Loading Game…</div>

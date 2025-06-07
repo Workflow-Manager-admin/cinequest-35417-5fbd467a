@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getPopularMovies, isKollywoodOriginalMovie, getRomanizedTitle } from "./tmdbApi";
 
 function getSectionRegion(section) {
@@ -12,6 +13,7 @@ export default function GameBlurredPoster({ section }) {
   const [guess, setGuess] = useState("");
   const [msg, setMsg] = useState("");
   const [revealed, setRevealed] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     getPopularMovies({
@@ -26,6 +28,10 @@ export default function GameBlurredPoster({ section }) {
         );
         if (section === "kollywood") {
           filtered = filtered.filter(isKollywoodOriginalMovie);
+        }
+        // Enforce maximum 18 movies for quiz session
+        if (filtered.length > 18) {
+          filtered = filtered.slice(0, 18);
         }
         // Pick random one
         if (filtered.length) {
@@ -59,6 +65,19 @@ export default function GameBlurredPoster({ section }) {
 
   return (
     <div className="container" style={{ marginTop: 100 }}>
+      <button
+        className="btn"
+        style={{
+          background: "#f1e4fa",
+          color: "#d505ff",
+          border: "1px solid #d505ff55",
+          marginBottom: 18,
+          fontWeight: 600,
+        }}
+        onClick={() => navigate(-1)}
+      >
+        ← Back
+      </button>
       <h2 style={{ color: "#d505ff" }}>Blurred Poster Guessing</h2>
       {!movie ? (
         <div>Loading...</div>

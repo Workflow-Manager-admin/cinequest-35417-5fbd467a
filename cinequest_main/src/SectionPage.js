@@ -36,6 +36,19 @@ export default function SectionPage({ section }) {
 
   return (
     <div className="container" style={{ marginTop: 100 }}>
+      <button
+        className="btn"
+        style={{
+          background: "#f1e4fa",
+          color: "#d505ff",
+          border: "1px solid #d505ff55",
+          marginBottom: 18,
+          fontWeight: 600,
+        }}
+        onClick={() => navigate(-1)}
+      >
+        ← Back
+      </button>
       <div style={{ fontSize: 26, fontWeight: 700, color: "#d505ff" }}>
         {section === "hollywood" ? "Hollywood" : "Kollywood"} Section
       </div>

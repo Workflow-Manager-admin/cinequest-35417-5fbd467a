@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getPopularMovies, isKollywoodOriginalMovie, getRomanizedTitle } from "./tmdbApi";
 
 const sampleMovieClips = [
@@ -19,17 +20,20 @@ function getSectionMovies(section, cb) {
     if (section === "kollywood") {
       m = m.filter(isKollywoodOriginalMovie);
     }
+    // Enforce max 18 for a quiz session
+    if (m.length > 18) m = m.slice(0, 18);
     if (m.length) cb(m);
     else cb([]);
   });
 }
 
-// PUBLIC_INTERFACE
+ // PUBLIC_INTERFACE
 export default function GameMovieClipQuiz({ section }) {
   const [movie, setMovie] = useState(null);
   const [quiz, setQuiz] = useState({}); // { answer: "", video: "" }
   const [chosen, setChosen] = useState("");
   const [resultMsg, setResultMsg] = useState("");
+  const navigate = useNavigate();
 
   // Only demo: use sampleMovieClips as fallback
   useEffect(() => {
@@ -62,6 +66,19 @@ export default function GameMovieClipQuiz({ section }) {
 
   return (
     <div className="container" style={{ marginTop: 100 }}>
+      <button
+        className="btn"
+        style={{
+          background: "#f1e4fa",
+          color: "#d505ff",
+          border: "1px solid #d505ff55",
+          marginBottom: 18,
+          fontWeight: 600,
+        }}
+        onClick={() => navigate(-1)}
+      >
+        ← Back
+      </button>
       <h2 style={{ color: "#d505ff" }}>Movie Clip Quiz</h2>
       {!quiz.video ? (
         <div>Loading Clip…</div>

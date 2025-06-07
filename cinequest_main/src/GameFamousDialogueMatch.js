@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getPopularMovies, getRomanizedTitle } from "./tmdbApi";
 
- // Max 10 unique questions per session
+// Max 10 unique questions per session
 const MAX_QUIZZES = 10;
 
 // Demo dialogue set; production code could use a much larger set
@@ -77,7 +77,7 @@ export default function GameFamousDialogueMatch({ section }) {
         // For Kollywood, filter to only those found in the dialogue set and with poster
         if (section === "kollywood") {
           tmdbMovies = tmdbMovies.filter(m =>
-            m.poster_path && ["Baasha", "Sivaji"].includes(m.title) // titles in dataset
+            m.poster_path && ["Baasha", "Sivaji"].includes(m.title)
           );
         } else {
           tmdbMovies = tmdbMovies.filter(m =>
@@ -91,14 +91,16 @@ export default function GameFamousDialogueMatch({ section }) {
       // Compose movieTitle -> poster_path for only those present
       const tmdbPosterMap = {};
       tmdbMovies.forEach(m => {
-        tmdbPosterMap[m.title] = m.poster_path;
+        if (m.poster_path && m.title) {
+          tmdbPosterMap[m.title] = m.poster_path;
+        }
       });
 
       // Compose usable dialogue questions: must have TMDB poster available for the movie
       const candidates = getSectionChoices(section).filter(
         d => !!tmdbPosterMap[d.movie]
       );
-      // If not enough for 15, just use as many as possible (with enforced uniqueness)
+      // Always ensure a unique set, exactly MAX_QUIZZES for the session (if enough available)
       const sessionSet = shuffleArray(candidates).slice(0, Math.min(MAX_QUIZZES, candidates.length));
       setQuizSet(sessionSet);
 
@@ -159,7 +161,7 @@ export default function GameFamousDialogueMatch({ section }) {
     }));
   }
 
-    // Quiz flow: selecting a choice
+  // Quiz flow: selecting a choice, now always auto-advances to next after a choice (no next button between questions)
   function checkMatch(movieTitle) {
     if (revealed || loading) return;
     setPicked(movieTitle);
@@ -177,27 +179,16 @@ export default function GameFamousDialogueMatch({ section }) {
     }
     setRevealed(true);
 
-    // Auto-advance after 1.2 seconds unless this was last question
+    // Always auto-advance after 1.15 seconds unless this was last question
     if (quizIdx + 1 < quizSet.length) {
       setTimeout(() => {
         setResultMsg("");
         setPicked("");
         setRevealed(false);
         setQuizIdx(i => i + 1);
-      }, 1200);
+      }, 1150);
     }
     // Otherwise, leave at completion so Play Again/Restart is available
-  }
-
-  function handleNext() {
-    setResultMsg("");
-    setPicked("");
-    setRevealed(false);
-    if (quizIdx + 1 < quizSet.length) {
-      setQuizIdx(i => i + 1);
-    } else {
-      setRevealed(true);
-    }
   }
 
   function handleRestart() {
@@ -212,15 +203,10 @@ export default function GameFamousDialogueMatch({ section }) {
     setLoading(true);
 
     // Redo session selection and poster preload (simplest to rely on effect)
-    // PRODUCTION: Here you might want to cache TMDB calls for performance
     let candidates = getSectionChoices(section);
     let sessionSet = shuffleArray(candidates).slice(0, Math.min(MAX_QUIZZES, candidates.length));
     setQuizSet(sessionSet);
 
-    // Trigger poster reload on restart (simulate fresh play)
-    // But if moviePosters not changed for this session, reuse
-    // Otherwise, effect will run and refill options
-    // (moviePosters and quizSet effect together trigger options update)
     setLoading(false);
   }
 
@@ -316,28 +302,40 @@ export default function GameFamousDialogueMatch({ section }) {
                     opacity: revealed && !isPicked && !isCorrect ? 0.65 : 1,
                     transition: "all 0.09s"
                   }}>
-                  {opt.poster_path ? (
-                    <img
-                      // TMDB poster images do NOT require API key in URL
-                      src={`https://image.tmdb.org/t/p/w185${opt.poster_path}`}
-                      style={{
-                        width: 85,
-                        height: 120,
-                        objectFit: "cover",
-                        borderRadius: 7,
-                        marginBottom: 7,
-                        background: "#d3cdf2"
-                      }}
-                      alt={opt.movie}
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div style={{
-                      width: 85, height: 120, background: "#ddd",
-                      borderRadius: 7, margin: "0 auto 6px", display: "flex",
-                      alignItems: "center", justifyContent: "center", fontSize: 22
-                    }}>🎬</div>
-                  )}
+                  {/* Always try to show TMDB poster, else fallback */}
+                  <div style={{ position: "relative" }}>
+                    {opt.poster_path ? (
+                      <img
+                        src={`https://image.tmdb.org/t/p/w185${opt.poster_path}`}
+                        style={{
+                          width: 85,
+                          height: 120,
+                          objectFit: "cover",
+                          borderRadius: 7,
+                          marginBottom: 7,
+                          background: "#d3cdf2"
+                        }}
+                        alt={opt.movie}
+                        loading="lazy"
+                        onError={e => {
+                          // If poster fails, fallback to placeholder
+                          e.target.onerror = null;
+                          e.target.style.display = "none";
+                          const fallback = e.target.nextSibling;
+                          if (fallback) fallback.style.display = "flex";
+                        }}
+                      />
+                    ) : null}
+                    {/* Always render fallback, only show if no poster */}
+                    {!opt.poster_path && (
+                      <div style={{
+                        width: 85, height: 120, background: "#ddd",
+                        borderRadius: 7, margin: "0 auto 6px", display: "flex",
+                        alignItems: "center", justifyContent: "center", fontSize: 22
+                      }}>🎬</div>
+                    )}
+                    {/* If poster image fails and is hidden, the block above will appear */}
+                  </div>
                   <div style={{
                     fontWeight: 600,
                     fontSize: 15,
@@ -354,7 +352,8 @@ export default function GameFamousDialogueMatch({ section }) {
           <div style={{ marginTop: 24, minHeight: 28 }}>
             {resultMsg}
           </div>
-          {revealed && (
+          {/* Play Again only appears on completion, Next is superseded by auto-advance */}
+          {revealed && quizIdx + 1 === quizSet.length && (
             <div style={{
               marginTop: 16,
               display: "flex",
@@ -362,35 +361,19 @@ export default function GameFamousDialogueMatch({ section }) {
               justifyContent: "center",
               gap: 17
             }}>
-              {quizIdx + 1 < quizSet.length ? (
-                <button
-                  className="btn"
-                  style={{
-                    background: "#d505ff",
-                    color: "#fff",
-                    fontWeight: 600,
-                    borderRadius: 8,
-                    minWidth: 120
-                  }}
-                  onClick={handleNext}
-                >
-                  Next
-                </button>
-              ) : (
-                <button
-                  className="btn"
-                  style={{
-                    background: "#f3e7fa",
-                    color: "#d505ff",
-                    fontWeight: 600,
-                    borderRadius: 8,
-                    minWidth: 120
-                  }}
-                  onClick={handleRestart}
-                >
-                  Play Again
-                </button>
-              )}
+              <button
+                className="btn"
+                style={{
+                  background: "#f3e7fa",
+                  color: "#d505ff",
+                  fontWeight: 600,
+                  borderRadius: 8,
+                  minWidth: 120
+                }}
+                onClick={handleRestart}
+              >
+                Play Again
+              </button>
             </div>
           )}
         </div>

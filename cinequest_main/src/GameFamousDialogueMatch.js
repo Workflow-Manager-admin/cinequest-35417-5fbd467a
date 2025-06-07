@@ -5,33 +5,22 @@ import { getPopularMovies, getRomanizedTitle } from "./tmdbApi";
 // Max 15 unique questions per session
 const MAX_QUIZZES = 15;
 
+// Demo dialogue set; production code could use a much larger set
 const dialogueDataset = [
-  // Example pairs: dialogue -> movie
-  {
-    movie: "The Godfather",
-    dialogue: "I'm gonna make him an offer he can't refuse."
-  },
-  {
-    movie: "Baasha",
-    dialogue: "Naan oru thadavai sonna, nooru thadavai sonna madhiri."
-  },
-  {
-    movie: "Pulp Fiction",
-    dialogue: "Say 'what' again. I dare you."
-  },
-  {
-    movie: "Sivaji",
-    dialogue: "Vaaji Vaaji Sivaji!"
-  },
+  { movie: "The Godfather", dialogue: "I'm gonna make him an offer he can't refuse." },
+  { movie: "Baasha", dialogue: "Naan oru thadavai sonna, nooru thadavai sonna madhiri." },
+  { movie: "Pulp Fiction", dialogue: "Say 'what' again. I dare you." },
+  { movie: "Sivaji", dialogue: "Vaaji Vaaji Sivaji!" }
 ];
 
+// Section-appropriate dialogues
 function getSectionChoices(section) {
   return section === "hollywood"
     ? dialogueDataset.filter(d => ["The Godfather", "Pulp Fiction"].includes(d.movie))
     : dialogueDataset.filter(d => ["Baasha", "Sivaji"].includes(d.movie));
 }
 
-// Helper to randomize array (shallow copy)
+// Array shuffle helper (returns new array)
 function shuffleArray(arr) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; --i) {
@@ -41,21 +30,24 @@ function shuffleArray(arr) {
   return a;
 }
 
+const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w185";
+const TMDB_API_KEY = "5bc67d3b06aecbd18121a3cbbc16eb59";
+
 // PUBLIC_INTERFACE
 export default function GameFamousDialogueMatch({ section }) {
-  // Unique quiz sequence for session
-  const [quizSet, setQuizSet] = useState([]);
-  const [quizIdx, setQuizIdx] = useState(0); // index for current quiz
-  const [picked, setPicked] = useState(""); // chosen answer for this quiz
-  const [resultMsg, setResultMsg] = useState(""); // score/result for this quiz
-  const [movieImages, setMovieImages] = useState({}); // movie: poster_path
+  const [quizSet, setQuizSet] = useState([]); // Array of { dialogue, movie }
+  const [quizIdx, setQuizIdx] = useState(0);
+  const [picked, setPicked] = useState(""); // user's current guess/title
+  const [resultMsg, setResultMsg] = useState("");
+  const [options, setOptions] = useState([]); // Four poster-image option objects per question
+  const [moviePosters, setMoviePosters] = useState({}); // {movieTitle: poster_path}
   const [score, setScore] = useState(0);
-  const [revealed, setRevealed] = useState(false); // disables input after answer
+  const [revealed, setRevealed] = useState(false);
   const [loading, setLoading] = useState(true);
-
+  const [posterChoicesCache, setPosterChoicesCache] = useState({}); // question idx -> array of 4 movie titles (unique)
   const navigate = useNavigate();
 
-  // Build a set of MAX_QUIZZES unique dialogues per session and preload posters
+  // On mount/section change, build unique, shuffled quiz dataset and load movie posters
   useEffect(() => {
     setLoading(true);
     setQuizIdx(0);
@@ -63,82 +55,136 @@ export default function GameFamousDialogueMatch({ section }) {
     setResultMsg("");
     setPicked("");
     setRevealed(false);
+    setOptions([]);
+    setPosterChoicesCache({});
 
-    // Get candidate set and shuffle
+    // Compose unique session: shuffle & pick up to MAX_QUIZZES questions w/o repeats
     let candidates = getSectionChoices(section);
-    // Repeat dataset if less than MAX_QUIZZES (for true code would need >15, but use duplicates if needed)
-    let sessionSet = [];
-    if (candidates.length >= MAX_QUIZZES) {
-      sessionSet = shuffleArray(candidates).slice(0, MAX_QUIZZES);
-    } else {
-      let times = Math.ceil(MAX_QUIZZES / candidates.length);
-      let pool = [];
-      for (let t = 0; t < times; ++t) pool = pool.concat(shuffleArray(candidates));
-      sessionSet = pool.slice(0, MAX_QUIZZES);
-    }
+    // If not enough for 15, just use as many as possible (with enforced uniqueness)
+    let sessionSet = shuffleArray(candidates).slice(0, Math.min(MAX_QUIZZES, candidates.length));
     setQuizSet(sessionSet);
 
-    // Preload poster images for all movies in quizSet
-    const moviesToGet = Array.from(new Set(sessionSet.map(d => d.movie)));
-    async function fetchImgs() {
-      let res = {};
-      for (const t of moviesToGet) {
-        try {
-          const sr = await getPopularMovies({
+    // Preload all poster paths for relevant movie titles. Also prepare a broader pool for distractors.
+    // We need both: correct answer's poster, and posters for other options (show four per question)
+    let allMovies = Array.from(new Set(sessionSet.map(d => d.movie))); // correct-answer movies
+    let candidatePool = getSectionChoices(section).map(d => d.movie);
+    let allQuizMovies = Array.from(new Set([...allMovies, ...candidatePool])); // ensure all candidates in session
+
+    async function fetchAllPosters() {
+      let result = {};
+      // For more robust matching, get multiple pages for broader distractors if needed
+      let primary, secondary = [];
+      try {
+        // Eagerly grab two pages of populars, fallback for better accuracy
+        const r1 = await getPopularMovies({
+          region: section === "kollywood" ? "IN" : "US",
+          include_adult: false,
+          page: 1,
+        });
+        primary = r1.results || [];
+
+        // Helper: if any quiz/movie not found by title in primary, search page2
+        if (allQuizMovies.length > primary.length) {
+          const r2 = await getPopularMovies({
             region: section === "kollywood" ? "IN" : "US",
             include_adult: false,
+            page: 2,
           });
-          // Find movie by normalized title
-          const found = (sr.results || []).find(
-            m =>
-              m.title.toLowerCase().replace(/[^a-z0-9]/g, "") ===
-              t.toLowerCase().replace(/[^a-z0-9]/g, "")
-          );
-          if (found && found.poster_path) res[t] = found.poster_path;
-        } catch { /* ignore errors */ }
+          secondary = r2.results || [];
+        }
+      } catch {
+        primary = [];
+        secondary = [];
       }
-      setMovieImages(res);
+      const all = primary.concat(secondary);
+
+      for (let movieTitle of allQuizMovies) {
+        // Match using normalized title (loose to account for minor TMDB differences)
+        let found = all.find(
+          m => m.title && m.title.toLowerCase().replace(/[^a-z0-9]/g, "") ===
+            movieTitle.toLowerCase().replace(/[^a-z0-9]/g, "")
+        );
+        if (!found && section === "kollywood") {
+          // For Kollywood, also try original_title (romanized)
+          found = all.find(
+            m => m.original_title && m.original_title.toLowerCase().replace(/[^a-z0-9]/g, "") ===
+              movieTitle.toLowerCase().replace(/[^a-z0-9]/g, "")
+          );
+        }
+        if (found && found.poster_path)
+          result[movieTitle] = found.poster_path;
+      }
+      setMoviePosters(result);
     }
-    fetchImgs().then(() => setLoading(false));
-  // eslint-disable-next-line
+    fetchAllPosters().then(() => setLoading(false));
   }, [section]);
 
-  // Shuffle answer options for each question
-  function getOptions() {
-    if (!quizSet.length) return [];
-    let candidates = getSectionChoices(section);
-    // All options must be in this section; shuffle order
-    return shuffleArray([...candidates]);
+  // When quiz set and posters are loaded, set up the four poster options for the first question
+  useEffect(() => {
+    if (quizSet.length && Object.keys(moviePosters).length && !loading) {
+      setOptions(generatePosterChoices(0, quizSet, moviePosters, section, posterChoicesCache, setPosterChoicesCache));
+    }
+    // eslint-disable-next-line
+  }, [quizSet, moviePosters, loading]);
+
+  // On question change, set poster options accordingly
+  useEffect(() => {
+    if (
+      quizSet.length > quizIdx &&
+      Object.keys(moviePosters).length &&
+      !loading
+    ) {
+      setOptions(generatePosterChoices(quizIdx, quizSet, moviePosters, section, posterChoicesCache, setPosterChoicesCache));
+    }
+    // eslint-disable-next-line
+  }, [quizIdx, quizSet, moviePosters, loading]);
+
+  // Helper: Make four poster choices (including the correct one, others are session-unique and never repeated per game)
+  function generatePosterChoices(idx, quizSet, posterMap, section, cache, cacheSetter) {
+    if (cache[idx]) {
+      // Already generated for this question
+      return cache[idx].map((movieTitle) => ({
+        movie: movieTitle,
+        poster_path: posterMap[movieTitle] || null
+      }));
+    }
+    // Candidates for distractors: all movies from the section with posters already found, excluding the correct answer
+    const current = quizSet[idx];
+    if (!current) return [];
+
+    const allChoices = getSectionChoices(section)
+      .map(d => d.movie)
+      .filter(t => t !== current.movie && posterMap[t]);
+
+    // Shuffle and pick 3 unique distractors (or less if not available!) plus the correct answer
+    let distractors = shuffleArray(allChoices).slice(0, 3);
+    const optionTitles = shuffleArray([current.movie, ...distractors]);
+    // Store so this question will never change order of displayed options on re-render
+    cacheSetter(prv => ({ ...prv, [idx]: optionTitles }));
+
+    return optionTitles.map(movieTitle => ({
+      movie: movieTitle,
+      poster_path: posterMap[movieTitle] || null
+    }));
   }
 
-  // Quiz scoring/answer flow
-  function checkMatch(title) {
-    // Only allow if not answered/revealed
+  // Quiz flow: selecting a choice
+  function checkMatch(movieTitle) {
     if (revealed || loading) return;
-    setPicked(title);
-    const isKollywood = section === "kollywood";
-    const correctMovie =
-      isKollywood
-        ? getRomanizedTitle({ title: quizSet[quizIdx].movie, original_title: quizSet[quizIdx].movie })
-        : quizSet[quizIdx].movie;
+    setPicked(movieTitle);
+    const correctMovie = quizSet[quizIdx]?.movie;
 
-    const correct = isKollywood
-      ? title === correctMovie
-      : title === correctMovie;
-
-    let showTitle = correctMovie;
-    if (correct) {
+    if (movieTitle === correctMovie) {
       setScore(s => s + 1);
       setResultMsg("🎉 Correct! Score: " + (score + 1));
     } else {
       setResultMsg(
-        "❌ Oops, the correct answer was: " + showTitle + " | Score: " + score
+        "❌ Oops, the correct answer was: " + correctMovie + " | Score: " + score
       );
     }
     setRevealed(true);
   }
 
-  // Move to next quiz, or finish
   function handleNext() {
     setResultMsg("");
     setPicked("");
@@ -146,59 +192,36 @@ export default function GameFamousDialogueMatch({ section }) {
     if (quizIdx + 1 < quizSet.length) {
       setQuizIdx(i => i + 1);
     } else {
-      // done; stays on last
       setRevealed(true);
     }
   }
 
   function handleRestart() {
-    // Re-run effect by resetting section (triggers new session)
+    // Triggers fresh session via reset effect
     setQuizIdx(0);
     setScore(0);
     setResultMsg("");
     setPicked("");
     setRevealed(false);
+    setOptions([]);
+    setPosterChoicesCache({});
     setLoading(true);
 
-    // This will re-fetch posters, but that's ok for session restart
+    // Redo session selection and poster preload (simplest to rely on effect)
+    // PRODUCTION: Here you might want to cache TMDB calls for performance
     let candidates = getSectionChoices(section);
-    let sessionSet = [];
-    if (candidates.length >= MAX_QUIZZES) {
-      sessionSet = shuffleArray(candidates).slice(0, MAX_QUIZZES);
-    } else {
-      let times = Math.ceil(MAX_QUIZZES / candidates.length);
-      let pool = [];
-      for (let t = 0; t < times; ++t) pool = pool.concat(shuffleArray(candidates));
-      sessionSet = pool.slice(0, MAX_QUIZZES);
-    }
+    let sessionSet = shuffleArray(candidates).slice(0, Math.min(MAX_QUIZZES, candidates.length));
     setQuizSet(sessionSet);
 
-    const moviesToGet = Array.from(new Set(sessionSet.map(d => d.movie)));
-    async function fetchImgs() {
-      let res = {};
-      for (const t of moviesToGet) {
-        try {
-          const sr = await getPopularMovies({
-            region: section === "kollywood" ? "IN" : "US",
-            include_adult: false,
-          });
-          const found = (sr.results || []).find(
-            m =>
-              m.title.toLowerCase().replace(/[^a-z0-9]/g, "") ===
-              t.toLowerCase().replace(/[^a-z0-9]/g, "")
-          );
-          if (found && found.poster_path) res[t] = found.poster_path;
-        } catch {}
-      }
-      setMovieImages(res);
-      setLoading(false);
-    }
-    fetchImgs();
+    // Trigger poster reload on restart (simulate fresh play)
+    // But if moviePosters not changed for this session, reuse
+    // Otherwise, effect will run and refill options
+    // (moviePosters and quizSet effect together trigger options update)
+    setLoading(false);
   }
 
-  // Current quiz content
+  // Current quiz
   const currentPair = quizSet[quizIdx] || null;
-  const options = getOptions();
 
   return (
     <div className="container" style={{ marginTop: 100 }}>
@@ -244,32 +267,25 @@ export default function GameFamousDialogueMatch({ section }) {
           </div>
           <div style={{
             display: "flex",
-            gap: 16,
+            gap: 19,
             justifyContent: "center",
-            marginTop: 10,
+            marginTop: 20,
             flexWrap: "wrap"
           }}>
             {options.map(opt => {
-              const optMovie = section === "kollywood"
-                ? getRomanizedTitle({ title: opt.movie, original_title: opt.movie })
-                : opt.movie;
-              const isPicked = picked === optMovie;
-              // During review mode, highlight the correct answer green, incorrect red
-              const isThisCorrect =
-                (section === "kollywood"
-                  ? getRomanizedTitle({ title: currentPair.movie, original_title: currentPair.movie })
-                  : currentPair.movie) === optMovie;
+              const isPicked = picked === opt.movie;
+              const isCorrect = currentPair.movie === opt.movie;
               return (
                 <div
                   key={opt.movie}
                   tabIndex={0}
-                  onClick={() => !revealed && checkMatch(optMovie)}
+                  onClick={() => !revealed && checkMatch(opt.movie)}
                   onKeyDown={e => {
-                    if (!revealed && e.key === "Enter") checkMatch(optMovie);
+                    if (!revealed && e.key === "Enter") checkMatch(opt.movie);
                   }}
                   style={{
                     background:
-                      revealed && isThisCorrect
+                      revealed && isCorrect
                         ? "#25B219"
                         : isPicked
                         ? revealed
@@ -277,61 +293,70 @@ export default function GameFamousDialogueMatch({ section }) {
                           : "#d505ff"
                         : "#f9f9fb",
                     color:
-                      revealed && (isThisCorrect || isPicked)
+                      revealed && (isCorrect || isPicked)
                         ? "#fff"
                         : "#101",
-                    borderRadius: 10,
-                    padding: 14,
-                    minWidth: 98,
+                    borderRadius: 13,
+                    padding: 9,
+                    minWidth: 108,
                     cursor: revealed ? "default" : "pointer",
-                    boxShadow: "0 1.5px 8px #d505ff1e",
+                    boxShadow: "0 1.5px 12px #d505ff1e",
                     outline: isPicked ? "2.5px solid #8f00aa" : "none",
                     marginBottom: 8,
                     position: "relative",
-                    border: revealed && isThisCorrect
+                    border: revealed && isCorrect
                       ? "2.5px solid #25B219"
                       : revealed && isPicked
                       ? "2px solid #c00"
                       : "1px solid #eee",
-                    opacity: revealed && !isPicked && !isThisCorrect ? 0.72 : 1,
+                    opacity: revealed && !isPicked && !isCorrect ? 0.65 : 1,
+                    transition: "all 0.09s"
                   }}>
-                  {movieImages[opt.movie] ? (
+                  {opt.poster_path ? (
                     <img
-                      src={`https://image.tmdb.org/t/p/w185${movieImages[opt.movie]}`}
+                      // Always use TMDB, supply correct API key in fetch/poster URL for network request
+                      src={`${TMDB_IMAGE_BASE}${opt.poster_path}?api_key=${TMDB_API_KEY}`}
                       style={{
-                        width: 70,
-                        height: 98,
+                        width: 85,
+                        height: 120,
                         objectFit: "cover",
-                        borderRadius: 6,
-                        marginBottom: 5,
-                        background: "#ccc"
+                        borderRadius: 7,
+                        marginBottom: 7,
+                        background: "#d3cdf2"
                       }}
                       alt={opt.movie}
+                      loading="lazy"
                     />
                   ) : (
                     <div style={{
-                      width: 70, height: 98, background: "#ddd",
-                      borderRadius: 6, margin: "0 auto 5px", display: "flex",
+                      width: 85, height: 120, background: "#ddd",
+                      borderRadius: 7, margin: "0 auto 6px", display: "flex",
                       alignItems: "center", justifyContent: "center", fontSize: 22
-                    }}>🎥</div>
+                    }}>🎬</div>
                   )}
-                  <div style={{ fontWeight: 500 }}>
-                    {optMovie}
+                  <div style={{
+                    fontWeight: 600,
+                    fontSize: 15,
+                    marginTop: 1.5
+                  }}>
+                    {section === "kollywood"
+                      ? getRomanizedTitle({ title: opt.movie, original_title: opt.movie })
+                      : opt.movie}
                   </div>
                 </div>
               );
             })}
           </div>
-          <div style={{ marginTop: 22, minHeight: 24 }}>
+          <div style={{ marginTop: 24, minHeight: 28 }}>
             {resultMsg}
           </div>
           {revealed && (
             <div style={{
-              marginTop: 12,
+              marginTop: 16,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: 16
+              gap: 17
             }}>
               {quizIdx + 1 < quizSet.length ? (
                 <button
@@ -340,7 +365,7 @@ export default function GameFamousDialogueMatch({ section }) {
                     background: "#d505ff",
                     color: "#fff",
                     fontWeight: 600,
-                    borderRadius: 6,
+                    borderRadius: 8,
                     minWidth: 120
                   }}
                   onClick={handleNext}
@@ -354,7 +379,7 @@ export default function GameFamousDialogueMatch({ section }) {
                     background: "#f3e7fa",
                     color: "#d505ff",
                     fontWeight: 600,
-                    borderRadius: 6,
+                    borderRadius: 8,
                     minWidth: 120
                   }}
                   onClick={handleRestart}

@@ -1,135 +1,294 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { getPopularMovies, isKollywoodOriginalMovie, getRomanizedTitle, getKollywoodOriginalMovies } from "./tmdbApi";
+import {
+  getPopularMovies,
+  getMovieDetails,
+  isKollywoodOriginalMovie,
+  getRomanizedTitle,
+  getKollywoodOriginalMovies
+} from "./tmdbApi";
 
-// Movie image for quiz, not a video; fallback sample for demo
-const sampleMovies = [
-  { title: "Inception", poster_path: "/edv5CZvWj09upOsy2Y6IwDhK8bt.jpg" },
-  { title: "Parasite", poster_path: "/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg" },
-  { title: "Vikram", poster_path: "/7MdNGg6mUJf2Xz16GafVwHdLD6Q.jpg" },
-  { title: "Interstellar", poster_path: "/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg" }
-];
+// Helper to randomly choose one item from an array
+function pickOne(arr) {
+  if (!arr || arr.length === 0) return null;
+  return arr[Math.floor(Math.random() * arr.length)];
+}
 
-// Helper: get movies for section (Hollywood: TMDB popular; Kollywood: strict original language ta)
-function getSectionMovies(section, cb) {
+// Helper to pick a random element from an object { key: value, ... }
+function pickRandomObjEntry(obj) {
+  const keys = Object.keys(obj);
+  if (keys.length === 0) return null;
+  const key = pickOne(keys);
+  return [key, obj[key]];
+}
+
+// -- Trivia Question Factory --
+// Generates a list of possible interesting questions from TMDB data. Returns [{question, answer}...]
+function generateQuestions(movieDetails, section) {
+  if (!movieDetails) return [];
+
+  const questions = [];
+  const title = section === "kollywood"
+    ? getRomanizedTitle(movieDetails)
+    : movieDetails.title;
+  if (!title) return [];
+
+  // Plot/overview question
+  if (movieDetails.overview && movieDetails.overview.length > 35) {
+    questions.push({
+      question: "Which movie has this plot? " + movieDetails.overview.slice(0, 160) + (movieDetails.overview.length > 160 ? "…" : ""),
+      answer: title
+    });
+  }
+
+  // Release year
+  if (movieDetails.release_date) {
+    const year = movieDetails.release_date.slice(0, 4);
+    questions.push({
+      question: `In which year was "${title}" released?`,
+      answer: year
+    });
+  }
+
+  // Director
+  if (movieDetails.credits && movieDetails.credits.crew) {
+    const director = movieDetails.credits.crew.find(
+      c => c.job === "Director"
+    );
+    if (director && director.name) {
+      questions.push({
+        question: `Who directed the movie "${title}"?`,
+        answer: director.name
+      });
+    }
+  }
+
+  // Lead actor
+  if (movieDetails.credits && movieDetails.credits.cast && movieDetails.credits.cast.length > 0) {
+    const actor = movieDetails.credits.cast[0];
+    if (actor && actor.name) {
+      questions.push({
+        question: `Who played the lead role in "${title}"?`,
+        answer: actor.name
+      });
+    }
+  }
+
+  // Genre
+  if (movieDetails.genres && movieDetails.genres.length) {
+    const genre = movieDetails.genres[0].name;
+    questions.push({
+      question: `What is the main genre of "${title}"?`,
+      answer: genre
+    });
+  }
+
+  // Language
+  if (movieDetails.original_language) {
+    questions.push({
+      question: `What was the original language of release for "${title}"?`,
+      answer: movieDetails.original_language === "ta" ? "Tamil" : movieDetails.original_language === "en" ? "English" : movieDetails.original_language
+    });
+  }
+
+  // TMDB rating
+  if (typeof movieDetails.vote_average === "number") {
+    questions.push({
+      question: `What is the TMDB average rating (to 1 decimal) for "${title}"?`,
+      answer: String(Number(movieDetails.vote_average).toFixed(1))
+    });
+  }
+
+  return questions;
+}
+
+// Pick an interesting question randomly each round
+function pickQuestion(questions) {
+  if (!questions || !questions.length) {
+    return {question: "What is the title of this movie?", answer: null};
+  }
+  return pickOne(questions);
+}
+
+// Pick a random available backdrop still for the movie (prefers non-logo, largest size)
+function getBestBackdrop(backdrops) {
+  if (!Array.isArray(backdrops) || !backdrops.length) return null;
+  // Filter out 'logos' and low-res, prefer 16:9 ratio
+  const filtered = backdrops.filter(b =>
+    !!b.file_path && (!b.aspect_ratio || b.aspect_ratio > 1.5)
+  );
+  const sorted = (filtered.length ? filtered : backdrops)
+    .slice()
+    .sort((a, b) => (b.width || 0) - (a.width || 0));
+  return sorted[0]?.file_path || filtered[0]?.file_path || backdrops[0].file_path || null;
+}
+
+// Helper to get 18 session-unique movies (no repeats)
+async function fetchSessionMovies(section) {
   if (section === "kollywood") {
-    getKollywoodOriginalMovies({ page: 1 })
-      .then(data => {
-        let m = (data.results || []).filter(m => m.title && m.poster_path);
-        // Already filtered by with_original_language=ta in getKollywoodOriginalMovies
-        if (m.length > 18) m = m.slice(0, 18);
-        cb(m);
-      })
-      .catch(() => cb([]));
+    const data = await getKollywoodOriginalMovies({ page: 1 });
+    let movies = (data.results || []).filter(m => m.title && m.poster_path);
+    if (movies.length > 18) movies = movies.slice(0, 18);
+    return movies;
   } else {
-    getPopularMovies({
-      region: "US",
-      language: "en",
-      include_adult: false
-    }).then(data => {
-      let m = (data.results || []).filter(m => m.title && m.poster_path);
-      if (m.length > 18) m = m.slice(0, 18);
-      cb(m);
-    }).catch(() => cb([]));
+    const data = await getPopularMovies({ region: "US", language: "en", include_adult: false });
+    let movies = (data.results || []).filter(m => m.title && m.poster_path);
+    if (movies.length > 18) movies = movies.slice(0, 18);
+    return movies;
   }
 }
 
 // PUBLIC_INTERFACE
 export default function GameMovieClipQuiz({ section }) {
   const [movie, setMovie] = useState(null);
-  const [showImage, setShowImage] = useState(true); // Show image for 5s first
-  const [questionReady, setQuestionReady] = useState(false); // Show question
-  const [revealed, setRevealed] = useState(false);
-  const [resultMsg, setResultMsg] = useState("");
-  const [input, setInput] = useState("");
-  const [autoAdvance, setAutoAdvance] = useState(false);
+  const [movieDetails, setMovieDetails] = useState(null);
+  const [sessionMovies, setSessionMovies] = useState([]);
   const [usedIndices, setUsedIndices] = useState([]);
+  const [backdropPath, setBackdropPath] = useState(null);
+  const [quizPhase, setQuizPhase] = useState("scene"); // "scene" | "question"
+  const [questionObj, setQuestionObj] = useState(null);
+  const [userInput, setUserInput] = useState("");
+  const [revealed, setRevealed] = useState(false);
+  const [feedbackMsg, setFeedbackMsg] = useState("");
+  const [autoAdvance, setAutoAdvance] = useState(false);
+  const [waiting, setWaiting] = useState(true);
   const navigate = useNavigate();
   const timeoutRef = useRef();
 
-  // Pick next unused movie (cycling if all used, for demo)
-  function pickNextMovie(movies, prevUsed = []) {
-    if (!movies.length) return null;
-    // Pick a random index not in usedIndices; if all are used, reset usedIndices
-    let unused = movies
-      .map((_, idx) => idx)
-      .filter(idx => !prevUsed.includes(idx));
-    let useIndices = prevUsed.slice();
-    if (unused.length === 0) {
-      useIndices = [];
-      unused = movies.map((_, idx) => idx);
-    }
-    const idx = unused[Math.floor(Math.random() * unused.length)];
-    useIndices.push(idx);
-    setUsedIndices(useIndices);
-    return movies[idx];
-  }
-
-  // Loads a new random movie and resets states for image-to-question flow
-  function advanceQuiz() {
-    setShowImage(true);
-    setQuestionReady(false);
-    setRevealed(false);
-    setResultMsg("");
-    setInput("");
-    setAutoAdvance(false);
-
-    getSectionMovies(section, ms => {
-      let pick;
-      if (ms.length) {
-        pick = pickNextMovie(ms, usedIndices);
-      } else {
-        // fallback to a demo sample if no movies found
-        const idx = Math.floor(Math.random() * sampleMovies.length);
-        pick = sampleMovies[idx];
-      }
-      setMovie(pick);
-      timeoutRef.current = setTimeout(() => {
-        setShowImage(false);
-        setQuestionReady(true);
-      }, 5000);
-    });
-  }
-
-  // On section mount/change, or at end of advanceQuiz
+  // Step 1: On mount & section change, fetch unique movie session set
   useEffect(() => {
-    advanceQuiz();
+    setSessionMovies([]);
+    setUsedIndices([]);
+    setMovie(null);
+    setMovieDetails(null);
+    setBackdropPath(null);
+    setQuizPhase("scene");
+    setFeedbackMsg("");
+    setUserInput("");
+    setQuestionObj(null);
+    setRevealed(false);
+    setAutoAdvance(false);
+    setWaiting(true);
+
+    fetchSessionMovies(section).then(ms => {
+      setSessionMovies(ms);
+      setWaiting(false);
+    });
+    // cleanup
     return () => clearTimeout(timeoutRef.current);
     // eslint-disable-next-line
   }, [section]);
 
-  // If we advance after reveal (auto), reset new
+  // Step 2: Select next unused movie index for each round
+  function pickSessionMovie() {
+    if (!sessionMovies.length) return null;
+    let unused = sessionMovies
+      .map((m, idx) => idx)
+      .filter(idx => !usedIndices.includes(idx));
+    let nextUsed = [...usedIndices];
+    if (unused.length === 0) {
+      nextUsed = [];
+      unused = sessionMovies.map((_, idx) => idx);
+    }
+    const idx = pickOne(unused);
+    setUsedIndices([...nextUsed, idx]);
+    return sessionMovies[idx];
+  }
+
+  // Step 3: Start each round
+  function startRound() {
+    setQuizPhase("scene");
+    setMovie(null);
+    setMovieDetails(null);
+    setBackdropPath(null);
+    setFeedbackMsg("");
+    setRevealed(false);
+    setAutoAdvance(false);
+    setUserInput("");
+    setQuestionObj(null);
+    setWaiting(true);
+
+    const pick = pickSessionMovie();
+    if (!pick) {
+      setWaiting(true);
+      return;
+    }
+    // Fetch movie details including images, credits for question info
+    getMovieDetails(pick.id, { append_to_response: "images,credits" }).then(det => {
+      setMovie(pick);
+      setMovieDetails(det);
+      // Get best backdrop
+      const bestBg = det.images?.backdrops ? getBestBackdrop(det.images.backdrops) : null;
+      setBackdropPath(bestBg);
+      setWaiting(false);
+
+      // Show scene for 5s, then question phase
+      setQuizPhase("scene");
+      timeoutRef.current = setTimeout(() => {
+        setQuizPhase("question");
+        // Pick trivia question for this round
+        const qs = generateQuestions(det, section);
+        setQuestionObj(pickQuestion(qs));
+      }, 5000);
+    }).catch(() => {
+      // fallback: skip to next
+      setFeedbackMsg("Could not load movie details.");
+      setAutoAdvance(true);
+      setTimeout(() => startRound(), 1400);
+    });
+  }
+
+  // Step 4: Auto-begin first round when movies loaded
+  useEffect(() => {
+    if (sessionMovies.length) {
+      startRound();
+    }
+    // eslint-disable-next-line
+  }, [sessionMovies]);
+
+  // Step 5: Guess/check logic
+  function handleSubmit(e) {
+    e.preventDefault();
+    if (!movieDetails || !questionObj) return;
+    // Normalize answer and input for loose matches
+    const norm = s => (s || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+    // If answer is numeric (e.g. year or rating), allow close numeric matches
+    let correct =
+      questionObj.answer &&
+      (norm(userInput) === norm(questionObj.answer) ||
+        // Accept if user provided movie title and answer is part of title
+        (typeof questionObj.answer === "string" && norm(questionObj.answer).length > 2 &&
+         norm(userInput).includes(norm(questionObj.answer))));
+    setRevealed(true);
+    if (correct) {
+      setFeedbackMsg(`🎉 Correct! ${questionObj.answer}`);
+    } else {
+      setFeedbackMsg(`❌ Nope, correct answer was: ${questionObj.answer}`);
+    }
+    setAutoAdvance(true);
+    timeoutRef.current = setTimeout(() => {
+      setAutoAdvance(false);
+      startRound();
+    }, 1650);
+  }
+
+  function handleReveal() {
+    if (!questionObj) return;
+    setRevealed(true);
+    setFeedbackMsg(`😇 It's: ${questionObj.answer}`);
+    setAutoAdvance(true);
+    timeoutRef.current = setTimeout(() => {
+      setAutoAdvance(false);
+      startRound();
+    }, 1400);
+  }
+
+  // Clean up timer on unmount
   useEffect(() => {
     return () => clearTimeout(timeoutRef.current);
   }, []);
 
-  function check(e) {
-    e.preventDefault();
-    if (!movie) return;
-    let answer = section === "kollywood" ? getRomanizedTitle(movie) : movie.title;
-    if ((input || "").trim().toLowerCase() === (answer || "").trim().toLowerCase()) {
-      setResultMsg("🎉 Correct! It's " + answer);
-      setRevealed(true);
-      // Short auto advance after showing correct
-      setAutoAdvance(true);
-      timeoutRef.current = setTimeout(() => advanceQuiz(), 1550);
-    } else {
-      setResultMsg("❌ Nope, this was: " + answer);
-      setRevealed(true);
-      setAutoAdvance(true);
-      timeoutRef.current = setTimeout(() => advanceQuiz(), 1550);
-    }
-  }
-
-  function handleReveal() {
-    if (!movie) return;
-    let answer = section === "kollywood" ? getRomanizedTitle(movie) : movie.title;
-    setResultMsg("😇 It's: " + answer);
-    setRevealed(true);
-    setAutoAdvance(true);
-    timeoutRef.current = setTimeout(() => advanceQuiz(), 1400);
-  }
-
+  // MAIN RENDER
   return (
     <div className="container" style={{ marginTop: 100 }}>
       <button
@@ -142,17 +301,16 @@ export default function GameMovieClipQuiz({ section }) {
           fontWeight: 600,
         }}
         onClick={() => navigate(-1)}
-        disabled={autoAdvance}
+        disabled={autoAdvance || waiting}
       >
         ← Back
       </button>
-      <h2 style={{ color: "#d505ff" }}>Movie Clip Quiz</h2>
-      {!movie ? (
+      <h2 style={{ color: "#d505ff" }}>Movie Scene Quiz</h2>
+      {waiting ? (
         <div>Loading Quiz…</div>
       ) : (
         <div style={{ textAlign: "center" }}>
-          {/* Show the image phase for 5 seconds */}
-          {showImage ? (
+          {quizPhase === "scene" ? (
             <div>
               <div
                 style={{
@@ -164,71 +322,72 @@ export default function GameMovieClipQuiz({ section }) {
                   background: "#eee"
                 }}
               >
-                {movie.poster_path ? (
+                {backdropPath ? (
                   <img
-                    src={`https://image.tmdb.org/t/p/w400${movie.poster_path}`}
-                    alt="Movie Poster"
-                    style={{ width: 262, height: 390, objectFit: "cover", display: "block" }}
+                    src={`https://image.tmdb.org/t/p/w780${backdropPath}`}
+                    alt="Movie Scene"
+                    style={{ width: 400, height: 220, objectFit: "cover", display: "block" }}
                   />
                 ) : (
                   <div style={{
-                    width: 262, height: 390, background: "#ccc",
+                    width: 400, height: 220, background: "#ccc",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: 36, color: "#d505ff"
                   }}>🎬</div>
                 )}
               </div>
-              <div style={{ margin: "10px 0", color: "#aaa" }}>Memorize the movie poster!<br />Question will appear in 5 seconds…</div>
+              <div style={{ margin: "10px 0", color: "#aaa" }}>Memorize this movie scene!<br />Question will appear in 5 seconds…</div>
             </div>
-          ) : questionReady && (
-            <div>
-              <form onSubmit={check}>
-                <div style={{ fontWeight: 600, fontSize: 19, margin: "10px 0 19px 0" }}>
-                  What is the title of this movie?
-                </div>
-                <input
-                  type="text"
-                  placeholder="Movie title?"
-                  style={inputStyle}
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  autoFocus
-                  disabled={revealed || autoAdvance}
-                />
-                <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 13 }}>
-                  <button className="btn"
-                    style={{
-                      background: "#d505ff",
-                      color: "#fff",
-                      opacity: revealed || autoAdvance ? 0.5 : 1
-                    }}
-                    type="submit"
+          ) : (
+            questionObj && (
+              <div>
+                <form onSubmit={handleSubmit}>
+                  <div style={{ fontWeight: 600, fontSize: 18, margin: "10px 0 19px 0" }}>
+                    {questionObj.question}
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Your answer…"
+                    style={inputStyle}
+                    value={userInput}
+                    onChange={e => setUserInput(e.target.value)}
+                    autoFocus
                     disabled={revealed || autoAdvance}
-                  >Submit</button>
-                  {/* REVEAL ANSWER BUTTON */}
-                  <button
-                    className="btn"
-                    style={{
-                      background: "#fff",
-                      color: "#d505ff",
-                      border: "1px solid #d505ff",
-                      minWidth: 112,
-                      fontWeight: 600,
-                      opacity: revealed || autoAdvance ? 0.5 : 1
-                    }}
-                    type="button"
-                    onClick={handleReveal}
-                    disabled={revealed || autoAdvance}
-                  >
-                    Reveal Answer
-                  </button>
-                </div>
-              </form>
-              <div style={{ marginTop: 16, minHeight: 24 }}>{resultMsg}</div>
-              {autoAdvance && (
-                <div style={{ color: "#999", marginTop: 6 }}>Next quiz coming…</div>
-              )}
-            </div>
+                  />
+                  <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 13 }}>
+                    <button className="btn"
+                      style={{
+                        background: "#d505ff",
+                        color: "#fff",
+                        opacity: revealed || autoAdvance ? 0.5 : 1
+                      }}
+                      type="submit"
+                      disabled={revealed || autoAdvance}
+                    >Submit</button>
+                    <button
+                      className="btn"
+                      style={{
+                        background: "#fff",
+                        color: "#d505ff",
+                        border: "1px solid #d505ff",
+                        minWidth: 112,
+                        fontWeight: 600,
+                        opacity: revealed || autoAdvance ? 0.5 : 1
+                      }}
+                      type="button"
+                      onClick={handleReveal}
+                      disabled={revealed || autoAdvance}
+                    >
+                      Reveal Answer
+                    </button>
+                  </div>
+                </form>
+                <div style={{ marginTop: 16, minHeight: 24 }}>{feedbackMsg}</div>
+                {autoAdvance && (
+                  <div style={{ color: "#999", marginTop: 6 }}>Next quiz coming…</div>
+                )}
+              </div>
+            )
           )}
         </div>
       )}

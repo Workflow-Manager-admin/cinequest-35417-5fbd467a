@@ -313,18 +313,24 @@ export default function GameFourImageConnection({ section }) {
                 type="submit"
                 disabled={revealed || autoAdvance}
               >Submit</button>
+              {/* VISIBLY show Reveal Answer button, always during quiz unless autoAdvance or already revealed */}
               <button
                 className="btn"
                 style={{
                   background: "#fff",
                   color: "#d505ff",
                   border: "1px solid #d505ff",
-                  opacity: revealed || autoAdvance ? 0.5 : 1
+                  opacity: revealed || autoAdvance ? 0.5 : 1,
+                  fontWeight: 600,
+                  minWidth: 112,
+                  display: "inline-block",
                 }}
                 type="button"
                 disabled={revealed || autoAdvance}
                 onClick={handleReveal}
-              >Reveal</button>
+              >
+                Reveal Answer
+              </button>
             </div>
           </form>
           <div style={{ marginTop: 13, minHeight: 32 }}>

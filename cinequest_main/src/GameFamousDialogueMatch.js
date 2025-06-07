@@ -257,6 +257,7 @@ export default function GameFamousDialogueMatch({ section }) {
         <div>Loading Game…</div>
       ) : (
         <div style={{ textAlign: "center" }}>
+          {/* Always show the dialogue above the poster/image choices */}
           <div
             style={{
               background: "#fff",
@@ -273,6 +274,7 @@ export default function GameFamousDialogueMatch({ section }) {
           >
             “{currentPair.dialogue}”
           </div>
+          {/* Poster/image answer choices */}
           <div style={{
             display: "flex",
             gap: 19,

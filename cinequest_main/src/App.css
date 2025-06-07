@@ -4,7 +4,76 @@
   --text-color: #ffffff;
   --text-secondary: rgba(255, 255, 255, 0.7);
   --border-color: rgba(255, 255, 255, 0.1);
+  --cinema-bg-rad: linear-gradient(135deg, #ffbdae 0%, #ffebfe 85%, #eadafe 100%);
+  --curtain-gradient: linear-gradient(180deg, #d505ff 0%, #7e1ecf 100%);
+  --popcorn-highlight: #fdedab;
+  --spotlight-fade: rgba(255, 223, 58, 0.28);
 }
+
+body {
+  margin: 0;
+  font-family: 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  background-color: var(--base-dark);
+  color: var(--text-color);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Add cinema gradient bg with curtain overlay (reversible in one line) */
+  background: var(--cinema-bg-rad);
+  /* fallback for easy removal: comment/uncomment above */
+}
+
+.cinema-curtain-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw;
+  height: 180px;
+  z-index: 1;
+  pointer-events: none;
+  background: var(--curtain-gradient);
+  opacity: 0.93;
+  border-bottom-right-radius: 100px 45px;
+  border-bottom-left-radius: 70px 30px;
+  box-shadow: 0 9px 40px 0 #a018b985;
+}
+
+.cinema-spotlight-bg {
+  position: fixed;
+  top: 170px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 650px;
+  height: 190px;
+  background: var(--spotlight-fade);
+  border-radius: 45% 40% 60% 55%;
+  z-index: 0;
+  opacity: 0.41;
+  pointer-events: none;
+  filter: blur(12px);
+}
+
+.cinema-fg-icons {
+  z-index: 3;
+  position: fixed;
+  top: 19px; 
+  right: 30px;
+  display: flex;
+  gap: 19px;
+  pointer-events: none;
+  opacity: 0.63;
+}
+
+.cinema-bg-footer {
+  background: #fff6ed;
+  border-top: 1px solid #f4defd;
+  padding: 36px 0 8px 0;
+  text-align: center;
+  font-size: 1rem;
+  color: #d505ff;
+  font-weight: 500;
+  opacity: 0.88;
+  margin-top: 24px;
+}
+
 
 body {
   margin: 0;

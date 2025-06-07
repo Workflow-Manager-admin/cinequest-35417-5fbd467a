@@ -9,17 +9,67 @@ import GameBlurredPoster from "./GameBlurredPoster";
 import GameMovieClipQuiz from "./GameMovieClipQuiz";
 import GameFourImageConnection from "./GameFourImageConnection";
 import GameEmojiMovieGuess from "./GameEmojiMovieGuess";
+import {
+  FilmReelSVG,
+  PopcornSVG,
+  CurtainSVG,
+  SpotlightSVG,
+  MovieTicketSVG,
+  CinemaScreenSVG
+} from "./assets/CinemaSVGs";
+
+// Cinema overlay components (easy removal or toggle if needed)
+function CinemaBackgroundDecor() {
+  return (
+    <>
+      {/* Top curtain overlay */}
+      <div className="cinema-curtain-overlay">
+        {/* Decorative SVG curtain over gradient */}
+        <CurtainSVG style={{
+          position: "absolute", left: 20, top: -28, zIndex: 2, opacity: 0.97
+        }}/>
+      </div>
+      {/* Center spotlight effect */}
+      <div className="cinema-spotlight-bg">
+        <SpotlightSVG style={{
+          position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", opacity: 0.5
+        }} size={148}/>
+      </div>
+      {/* Top right fixed cinema icons (opacity as background deco) */}
+      <div className="cinema-fg-icons">
+        <FilmReelSVG size={34}/>
+        <PopcornSVG size={34}/>
+        <MovieTicketSVG size={34}/>
+      </div>
+    </>
+  );
+}
 
 function HomePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
   return (
-    <div className="container">
-      <div className="hero" style={{paddingTop: 110, color: "#0d0d0d"}}>
-        <div className="subtitle">The Movie Game Platform</div>
-        <h1 className="title" style={{color: "#d505ff"}}>CineQuest</h1>
-        <div className="description" style={{color: "#222"}}>
+    <div className="container" style={{ position: "relative", minHeight: "92vh" }}>
+      <div className="hero" style={{
+        paddingTop: 120, color: "#0d0d0d",
+        background: "rgba(255,255,255,0.04)",
+        borderRadius: 30, boxShadow: "0 4px 44px #d505ff17"
+      }}>
+        {/* Add cinema screen and reel icons in header for extra theming */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 6,
+        }}>
+          <CinemaScreenSVG size={52} style={{ opacity: 0.91 }}/>
+          <div className="subtitle">The Movie Game Platform</div>
+          <FilmReelSVG size={32} style={{ marginLeft: 10, marginBottom: 6, opacity: 0.94 }}/>
+        </div>
+        <h1 className="title" style={{color: "#d505ff", letterSpacing: "-2px", fontWeight: 700}}>
+          CineQuest
+        </h1>
+        <div className="description" style={{
+          color: "#222", background: "rgba(245,211,255,0.13)", borderRadius: 11, padding: "12px 8px"
+        }}>
           Hollywood & Kollywood movie quiz games powered by TMDB.<br />
           <small>
             {user
@@ -32,7 +82,8 @@ function HomePage() {
           style={{
             background: "#d505ff",
             color: "#fff",
-            fontWeight: 600
+            fontWeight: 600,
+            boxShadow: "0 2px 16px #ce72ff32"
           }}
           onClick={() =>
             user
@@ -42,20 +93,31 @@ function HomePage() {
         >
           {user ? "Choose Section" : "Get Started"}
         </button>
+        {/* Themed popcorn at CTA (visual only) */}
+        <div style={{ marginTop: 24 }}>
+          <PopcornSVG size={36} style={{verticalAlign: "middle", marginRight: 8}}/>
+        </div>
 
-        <div style={{ marginTop: 32 }}>
-          <div className="subtitle" style={{ fontSize: "1rem", color: "#d505ff" }}>
+        <div style={{ marginTop: 42 }}>
+          <div className="subtitle" style={{ fontSize: "1rem", color: "#d505ff", marginBottom: 2 }}>
             How CineQuest works
           </div>
           <div style={{
             color: "#333", maxWidth: 480, margin: "10px auto 0",
-            fontSize: 16, lineHeight: 1.7
+            fontSize: 16, lineHeight: 1.7,
+            background: "rgba(255,255,255,0.14)", borderRadius: 8, padding: 10
           }}>
             Login and pick either the Hollywood or Kollywood section. Each offers multiple games: guess movies from blurred posters, connect images, match dialogues, play movie clip quizzes, and select movies for directors!
             <br />
-            No adult movies included. Movie data powered by TMDB API.
+            <span style={{color: "#bf40bf"}}>No adult movies included. Movie data powered by TMDB API.</span>
           </div>
         </div>
+      </div>
+      <div className="cinema-bg-footer">
+        <span>
+          <MovieTicketSVG size={28} style={{verticalAlign: "middle"}}/>{" "}
+          Welcome to CineQuest &copy; 2024 – All movie game content uses TMDB data.
+        </span>
       </div>
     </div>
   );

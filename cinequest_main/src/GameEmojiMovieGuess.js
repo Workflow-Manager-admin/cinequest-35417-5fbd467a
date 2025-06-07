@@ -76,14 +76,16 @@ export default function GameEmojiMovieGuess({ section }) {
       try {
         // Fetch original language Tamil movies; may paginate for more variety
         let { results } = await getKollywoodOriginalMovies({ page: 1 });
-        // Use only those with title matching our hardcoded clues (case-insensitive substring), to ensure clue maps to real movie
+        // Normalize all romanized TMDB titles for matching.
+        const normTitle = (str) => (str || "").replace(/^the\s+/i, "").toLowerCase();
+        // Use only those with title matching our hardcoded clues (exact match or normalized match)
         let clues = [];
         for (let mapped of HARDCODED_TAMIL_EMOJI_CLUES) {
-          // Find in TMDB result set a movie matching by romanized title (ignoring case and leading articles)
+          // Find in TMDB result set a movie matching by romanized title (strict: normalized equals, not just includes)
           const match = results.find(m => {
-            let romTitle = getRomanizedTitle(m).replace(/^the\s+/i, "").toLowerCase();
-            let mappedName = mapped.tmdb_name.replace(/^the\s+/i, "").toLowerCase();
-            return romTitle.includes(mappedName);
+            let romTitle = normTitle(getRomanizedTitle(m));
+            let mappedName = normTitle(mapped.tmdb_name);
+            return romTitle === mappedName;
           });
           if (match) {
             clues.push({
@@ -92,6 +94,14 @@ export default function GameEmojiMovieGuess({ section }) {
               title: getRomanizedTitle(match)
             });
           }
+        }
+        // If clues are fewer than MAX_QUESTIONS, fall back to hardcoded set as emergency fallback (avoiding empty list/game complete)
+        if (clues.length < 1) {
+          // Fallback: present the hardcoded clues set (at least show *something*)
+          clues = HARDCODED_TAMIL_EMOJI_CLUES.map(c => ({
+            emojis: c.emojis,
+            title: c.tmdb_name
+          }));
         }
         // For randomness, shuffle and pick as many as possible, up to MAX_QUESTIONS.
         for (let i = clues.length - 1; i > 0; --i) {
@@ -111,7 +121,12 @@ export default function GameEmojiMovieGuess({ section }) {
       } catch (e) {
         if (!ignore) {
           setFetchError("Failed to load Kollywood emoji clues from TMDB.");
-          setSessionSet([]);
+          // Emergency fallback (still show the hardcoded clues, never empty)
+          const clues = HARDCODED_TAMIL_EMOJI_CLUES.map(c => ({
+            emojis: c.emojis,
+            title: c.tmdb_name
+          }));
+          setSessionSet(clues.slice(0, Math.min(MAX_QUESTIONS, clues.length)));
           setLoading(false);
         }
       }

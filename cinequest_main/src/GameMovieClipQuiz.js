@@ -359,7 +359,7 @@ export default function GameMovieClipQuiz({ section }) {
             questionObj && (
               <div>
                 <form onSubmit={handleSubmit}>
-                  <div style={{ fontWeight: 600, fontSize: 18, margin: "10px 0 19px 0" }}>
+                  <div style={{ fontWeight: 600, fontSize: 18, margin: "10px 0 19px 0", color: "#000" }}>
                     {questionObj.question}
                   </div>
                   <input

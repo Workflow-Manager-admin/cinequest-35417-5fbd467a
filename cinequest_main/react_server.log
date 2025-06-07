@@ -48,3 +48,50 @@ src/GameFamousDialogueMatch.js
   Line 34:7:  'TMDB_API_KEY' is assigned a value but never used  no-unused-vars
 
 webpack compiled with 1 warning
+Compiling...
+Compiled with warnings.
+
+[eslint] 
+src/GameFamousDialogueMatch.js
+  Line 34:7:  'TMDB_API_KEY' is assigned a value but never used  no-unused-vars
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+WARNING in [eslint] 
+src/GameFamousDialogueMatch.js
+  Line 34:7:  'TMDB_API_KEY' is assigned a value but never used  no-unused-vars
+
+webpack compiled with 1 warning
+Compiling...
+Compiled with warnings.
+
+[eslint] 
+src/GameFamousDialogueMatch.js
+  Line 34:7:  'TMDB_API_KEY' is assigned a value but never used  no-unused-vars
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+WARNING in [eslint] 
+src/GameFamousDialogueMatch.js
+  Line 34:7:  'TMDB_API_KEY' is assigned a value but never used  no-unused-vars
+
+webpack compiled with 1 warning
+Compiling...
+Compiled with warnings.
+
+[eslint] 
+src/GameFamousDialogueMatch.js
+  Line 33:7:  'TMDB_IMAGE_BASE' is assigned a value but never used  no-unused-vars
+  Line 34:7:  'TMDB_API_KEY' is assigned a value but never used     no-unused-vars
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+WARNING in [eslint] 
+src/GameFamousDialogueMatch.js
+  Line 33:7:  'TMDB_IMAGE_BASE' is assigned a value but never used  no-unused-vars
+  Line 34:7:  'TMDB_API_KEY' is assigned a value but never used     no-unused-vars
+
+webpack compiled with 1 warning

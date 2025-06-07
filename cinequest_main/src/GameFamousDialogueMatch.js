@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getPopularMovies, getRomanizedTitle } from "./tmdbApi";
 
-// Max 15 unique questions per session
-const MAX_QUIZZES = 15;
+ // Max 10 unique questions per session
+const MAX_QUIZZES = 10;
 
 // Demo dialogue set; production code could use a much larger set
 const dialogueDataset = [
@@ -159,21 +159,34 @@ export default function GameFamousDialogueMatch({ section }) {
     }));
   }
 
-  // Quiz flow: selecting a choice
+    // Quiz flow: selecting a choice
   function checkMatch(movieTitle) {
     if (revealed || loading) return;
     setPicked(movieTitle);
     const correctMovie = quizSet[quizIdx]?.movie;
 
+    let nextScore = score;
     if (movieTitle === correctMovie) {
-      setScore(s => s + 1);
-      setResultMsg("🎉 Correct! Score: " + (score + 1));
+      nextScore = score + 1;
+      setScore(nextScore);
+      setResultMsg("🎉 Correct! Score: " + nextScore);
     } else {
       setResultMsg(
         "❌ Oops, the correct answer was: " + correctMovie + " | Score: " + score
       );
     }
     setRevealed(true);
+
+    // Auto-advance after 1.2 seconds unless this was last question
+    if (quizIdx + 1 < quizSet.length) {
+      setTimeout(() => {
+        setResultMsg("");
+        setPicked("");
+        setRevealed(false);
+        setQuizIdx(i => i + 1);
+      }, 1200);
+    }
+    // Otherwise, leave at completion so Play Again/Restart is available
   }
 
   function handleNext() {
@@ -306,7 +319,7 @@ export default function GameFamousDialogueMatch({ section }) {
                   {opt.poster_path ? (
                     <img
                       // TMDB poster images do NOT require API key in URL
-                      src={`${TMDB_IMAGE_BASE}${opt.poster_path}`}
+                      src={`https://image.tmdb.org/t/p/w185${opt.poster_path}`}
                       style={{
                         width: 85,
                         height: 120,

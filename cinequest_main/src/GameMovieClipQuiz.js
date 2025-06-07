@@ -42,8 +42,8 @@ function shuffleArray(arr) {
 /**
  * PUBLIC_INTERFACE
  * For a shown movie scene, generates a single randomly chosen question of these types:
- * (1) "What is the name of the character?" — answer is main character's name (first from TMDB cast.character)
- * (2) "Who is the director?" — answer is director's real name from TMDB crew
+ * (1) "What is the movie title?" — answer is the movie title (English or romanized for Kollywood)
+ * (2) "Who is the director?" — answer is the director's real name from TMDB crew
  * (3) "Who is the hero?" — answer is main actor's real name (first from TMDB cast.name)
  *
  * All answers are pulled directly from the TMDB data for the shown scene/movie.
@@ -53,34 +53,19 @@ function generateSceneQuizQuestion(movieDetails, section) {
   if (!movieDetails) return null;
   let questionTypes = [];
 
-  // (1) Main character's name (first cast entry with proper "character" value)
-  let mainCharacter = null;
-  if (
-    movieDetails.credits &&
-    Array.isArray(movieDetails.credits.cast) &&
-    movieDetails.credits.cast.length > 0
-  ) {
-    mainCharacter = movieDetails.credits.cast.find(
-      m =>
-        m.character &&
-        m.character.length > 1 &&
-        !/^Self|Himself|Herself$/i.test(m.character)
-    );
-    if (mainCharacter && mainCharacter.character) {
-      questionTypes.push({
-        type: "main-character",
-        question: "What is the name of the character?",
-        answer: mainCharacter.character
-      });
-    }
-    // (3) Hero = main actor's real name (first in cast)
-    if (movieDetails.credits.cast[0] && movieDetails.credits.cast[0].name) {
-      questionTypes.push({
-        type: "hero",
-        question: "Who is the hero?",
-        answer: movieDetails.credits.cast[0].name
-      });
-    }
+  // (1) Movie Title (always available in filtered data)
+  let movieTitle;
+  if (section === "kollywood") {
+    movieTitle = getRomanizedTitle(movieDetails);
+  } else {
+    movieTitle = movieDetails.title;
+  }
+  if (movieTitle && movieTitle.trim().length > 1) {
+    questionTypes.push({
+      type: "movie-title",
+      question: "What is the movie title?",
+      answer: movieTitle
+    });
   }
 
   // (2) Director
@@ -98,7 +83,23 @@ function generateSceneQuizQuestion(movieDetails, section) {
     }
   }
 
-  // If none available, return null (safeguard)
+  // (3) Hero/main actor
+  if (
+    movieDetails.credits &&
+    Array.isArray(movieDetails.credits.cast) &&
+    movieDetails.credits.cast.length > 0
+  ) {
+    const mainActor = movieDetails.credits.cast[0];
+    if (mainActor && mainActor.name) {
+      questionTypes.push({
+        type: "hero",
+        question: "Who is the hero?",
+        answer: mainActor.name
+      });
+    }
+  }
+
+  // If none available, return null
   if (questionTypes.length === 0) return null;
 
   // Pick one randomly

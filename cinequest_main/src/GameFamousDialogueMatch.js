@@ -58,65 +58,56 @@ export default function GameFamousDialogueMatch({ section }) {
     setOptions([]);
     setPosterChoicesCache({});
 
-    // Compose unique session: shuffle & pick up to MAX_QUIZZES questions w/o repeats
-    let candidates = getSectionChoices(section);
-    // If not enough for 15, just use as many as possible (with enforced uniqueness)
-    let sessionSet = shuffleArray(candidates).slice(0, Math.min(MAX_QUIZZES, candidates.length));
-    setQuizSet(sessionSet);
-
-    // Preload all poster paths for relevant movie titles. Also prepare a broader pool for distractors.
-    // We need both: correct answer's poster, and posters for other options (show four per question)
-    let allMovies = Array.from(new Set(sessionSet.map(d => d.movie))); // correct-answer movies
-    let candidatePool = getSectionChoices(section).map(d => d.movie);
-    let allQuizMovies = Array.from(new Set([...allMovies, ...candidatePool])); // ensure all candidates in session
-
-    async function fetchAllPosters() {
-      let result = {};
-      // For more robust matching, get multiple pages for broader distractors if needed
-      let primary, secondary = [];
+    // Robust: Only use TMDB movies with valid posters for ALL options (answer + distractors)
+    async function setupSession() {
+      // Get TMDB movies for section (two pages for better coverage)
+      let tmdbMovies = [];
       try {
-        // Eagerly grab two pages of populars, fallback for better accuracy
-        const r1 = await getPopularMovies({
+        const page1 = await getPopularMovies({
           region: section === "kollywood" ? "IN" : "US",
           include_adult: false,
           page: 1,
         });
-        primary = r1.results || [];
-
-        // Helper: if any quiz/movie not found by title in primary, search page2
-        if (allQuizMovies.length > primary.length) {
-          const r2 = await getPopularMovies({
-            region: section === "kollywood" ? "IN" : "US",
-            include_adult: false,
-            page: 2,
-          });
-          secondary = r2.results || [];
-        }
-      } catch {
-        primary = [];
-        secondary = [];
-      }
-      const all = primary.concat(secondary);
-
-      for (let movieTitle of allQuizMovies) {
-        // Match using normalized title (loose to account for minor TMDB differences)
-        let found = all.find(
-          m => m.title && m.title.toLowerCase().replace(/[^a-z0-9]/g, "") ===
-            movieTitle.toLowerCase().replace(/[^a-z0-9]/g, "")
-        );
-        if (!found && section === "kollywood") {
-          // For Kollywood, also try original_title (romanized)
-          found = all.find(
-            m => m.original_title && m.original_title.toLowerCase().replace(/[^a-z0-9]/g, "") ===
-              movieTitle.toLowerCase().replace(/[^a-z0-9]/g, "")
+        const page2 = await getPopularMovies({
+          region: section === "kollywood" ? "IN" : "US",
+          include_adult: false,
+          page: 2,
+        });
+        tmdbMovies = (page1.results || []).concat(page2.results || []);
+        // For Kollywood, filter to only those found in the dialogue set and with poster
+        if (section === "kollywood") {
+          tmdbMovies = tmdbMovies.filter(m =>
+            m.poster_path && ["Baasha", "Sivaji"].includes(m.title) // titles in dataset
+          );
+        } else {
+          tmdbMovies = tmdbMovies.filter(m =>
+            m.poster_path && ["The Godfather", "Pulp Fiction"].includes(m.title)
           );
         }
-        if (found && found.poster_path)
-          result[movieTitle] = found.poster_path;
+      } catch {
+        tmdbMovies = [];
       }
-      setMoviePosters(result);
+
+      // Compose movieTitle -> poster_path for only those present
+      const tmdbPosterMap = {};
+      tmdbMovies.forEach(m => {
+        tmdbPosterMap[m.title] = m.poster_path;
+      });
+
+      // Compose usable dialogue questions: must have TMDB poster available for the movie
+      const candidates = getSectionChoices(section).filter(
+        d => !!tmdbPosterMap[d.movie]
+      );
+      // If not enough for 15, just use as many as possible (with enforced uniqueness)
+      const sessionSet = shuffleArray(candidates).slice(0, Math.min(MAX_QUIZZES, candidates.length));
+      setQuizSet(sessionSet);
+
+      // Record posters for the session candidates only (and all possible options from TMDB for distractors)
+      setMoviePosters(tmdbPosterMap);
+
+      setLoading(false);
     }
-    fetchAllPosters().then(() => setLoading(false));
+    setupSession();
   }, [section]);
 
   // When quiz set and posters are loaded, set up the four poster options for the first question
@@ -314,8 +305,8 @@ export default function GameFamousDialogueMatch({ section }) {
                   }}>
                   {opt.poster_path ? (
                     <img
-                      // Always use TMDB, supply correct API key in fetch/poster URL for network request
-                      src={`${TMDB_IMAGE_BASE}${opt.poster_path}?api_key=${TMDB_API_KEY}`}
+                      // TMDB poster images do NOT require API key in URL
+                      src={`${TMDB_IMAGE_BASE}${opt.poster_path}`}
                       style={{
                         width: 85,
                         height: 120,

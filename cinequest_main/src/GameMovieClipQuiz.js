@@ -41,37 +41,49 @@ function shuffleArray(arr) {
 
 /**
  * PUBLIC_INTERFACE
- * Generates a set of strongly factual/objective quiz questions about the provided movie,
- * using only TMDB data such as main cast, director, movie name, release year, and genre.
- * Returns an array of possible question objects.
+ * Generates a quiz question exclusively about ONE of:
+ * (1) the main character's name,
+ * (2) the movie's name,
+ * (3) the movie's director.
+ * Data are always sourced directly from TMDB for the selected movie.
+ * If any information is missing, falls back to another available type among these three.
  */
-function generateFactualQuestions(movieDetails, section) {
+function generateCoreMovieQuestionsOnly(movieDetails, section) {
   if (!movieDetails) return [];
   const questions = [];
-  // Ensure title for answer
+  // (b) Movie title (name)
   const title = section === "kollywood"
     ? getRomanizedTitle(movieDetails)
     : movieDetails.title;
-  if (!title) return [];
-
-  // 1. Ask for the movie title
-  questions.push({
-    question: "What is the title of this movie?",
-    answer: title,
-    type: "title"
-  });
-
-  // 2. Ask about the release year
-  if (movieDetails.release_date && movieDetails.release_date.length >= 4) {
-    const year = movieDetails.release_date.slice(0, 4);
+  if (title) {
     questions.push({
-      question: `In what year was this movie released?`,
-      answer: year,
-      type: "year"
+      question: "What is the name of the movie?",
+      answer: title,
+      type: "movie-title"
     });
   }
-
-  // 3. Ask for the director's name
+  // (a) Main character name, from main cast (prefer lead role with actual character name)
+  if (
+    movieDetails.credits &&
+    Array.isArray(movieDetails.credits.cast) &&
+    movieDetails.credits.cast.length > 0
+  ) {
+    // Prefer first credited with proper character name
+    const mainCharacter = movieDetails.credits.cast.find(
+      m =>
+        m.character &&
+        m.character.length > 1 &&
+        !/^Self|Himself|Herself$/i.test(m.character)
+    );
+    if (mainCharacter && mainCharacter.character) {
+      questions.push({
+        question: "What is the main character name?",
+        answer: mainCharacter.character,
+        type: "main-character"
+      });
+    }
+  }
+  // (c) Director name
   if (
     movieDetails.credits &&
     Array.isArray(movieDetails.credits.crew)
@@ -79,71 +91,13 @@ function generateFactualQuestions(movieDetails, section) {
     const director = movieDetails.credits.crew.find(c => c.job === "Director");
     if (director && director.name) {
       questions.push({
-        question: `Who directed this movie?`,
+        question: "Who is the director of this movie?",
         answer: director.name,
         type: "director"
       });
     }
   }
-
-  // 4. Ask for main (lead) actor/character name
-  if (
-    movieDetails.credits &&
-    Array.isArray(movieDetails.credits.cast) &&
-    movieDetails.credits.cast.length > 0
-  ) {
-    const leadCast = movieDetails.credits.cast[0];
-    if (leadCast && leadCast.name) {
-      // Actor name
-      questions.push({
-        question: `Who played the main character in this movie?`,
-        answer: leadCast.name,
-        type: "lead-actor"
-      });
-      // Character name (if available and not a generic name)
-      if (leadCast.character && leadCast.character.length > 1 && !/^Self|Himself|Herself$/i.test(leadCast.character)) {
-        questions.push({
-          question: `What is the name of the main character played by ${leadCast.name}?`,
-          answer: leadCast.character,
-          type: "lead-character"
-        });
-      }
-    }
-  }
-
-  // 5. Ask about the main genre
-  if (
-    movieDetails.genres &&
-    Array.isArray(movieDetails.genres) &&
-    movieDetails.genres.length > 0
-  ) {
-    const genre = movieDetails.genres[0].name;
-    if (genre) {
-      questions.push({
-        question: `What is the main genre of this movie?`,
-        answer: genre,
-        type: "genre"
-      });
-    }
-  }
-
-  // 6. Ask about the original language
-  if (
-    movieDetails.spoken_languages &&
-    Array.isArray(movieDetails.spoken_languages) &&
-    movieDetails.spoken_languages.length > 0
-  ) {
-    const langName = movieDetails.spoken_languages[0].english_name;
-    if (langName) {
-      questions.push({
-        question: `What is the primary language of this movie?`,
-        answer: langName,
-        type: "language"
-      });
-    }
-  }
-
-  // Shuffle to avoid pattern and add variety
+  // Always shuffle for variety/rotation
   return shuffleArray(questions);
 }
 
@@ -223,14 +177,16 @@ export default function GameMovieClipQuiz({ section }) {
       for (let i = 0; i < sceneMovies.length && quizzes.length < MAX_QUESTIONS; ++i) {
         const { movie, details, scenePath } = sceneMovies[i];
         if (!scenePath) continue; // safeguard (shouldn't happen)
-        // Generate a collection of factual questions for this movie
-        const qs = generateFactualQuestions(details, section);
-        // Always fall back to the movie title if no other question is available
-        const questionObj = qs.length ? qs[0] : {
-          question: "What is the title of this movie?",
-          answer: section === "kollywood" ? getRomanizedTitle(details) : details.title,
-          type: "title"
-        };
+        // [Changed]: Restrict to core question types (name, character, director)
+        const qs = generateCoreMovieQuestionsOnly(details, section);
+        // If >1, rotate questions, otherwise fallback to movie name
+        const questionObj = qs.length
+          ? qs[0]
+          : {
+              question: "What is the name of the movie?",
+              answer: section === "kollywood" ? getRomanizedTitle(details) : details.title,
+              type: "movie-title"
+            };
         quizzes.push({
           movie,
           details,

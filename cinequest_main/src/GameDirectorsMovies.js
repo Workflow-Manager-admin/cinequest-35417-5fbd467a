@@ -184,7 +184,8 @@ export default function GameDirectorsMovies({ section }) {
     setShowResult(true);
     setAutoAdvancing(true);
 
-    // Advance to next after a short timeout, unless session complete
+    // Progress automatically to the next quiz after feedback for this answer
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       setShowResult(false);
       setResultMsg("");

@@ -1,5 +1,6 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { getKollywoodOriginalMovies, getRomanizedTitle } from "./tmdbApi";
 
 // Demo data: Each question has a set of emojis and the movie title as answer
 const EMOJI_QUESTIONS = [
@@ -17,31 +18,132 @@ const EMOJI_QUESTIONS = [
 
 const MAX_QUESTIONS = 8; // How many per game session
 
+/** 
+ * Hardcoded emoji-to-Kollywood mapping.
+ * This is a limited set for demonstration in Kollywood mode.
+ * In production you can curate or crowdsource such emoji clues.
+ * Emoji clues should be unique per answer and selected for well-known Tamil (Kollywood) movies only.
+ */
+const TAMIL_EMOJI_CLUES = [
+  // Some popular Kollywood movies, with unique emoji clues
+  { emojis: "🤖👦💔🚀", title: "Enthiran" },                            // Enthiran
+  { emojis: "🕵️‍♂️🎩🔮", title: "Anniyan" },                           // Anniyan
+  { emojis: "🕺💃❤️🎶", title: "Kadhalan" },                          // Kadhalan
+  { emojis: "🚂💥🦸‍♂️", title: "Chennai Express" },                   // Actually Bollywood; skip in real use
+  { emojis: "👧🎨🎬", title: "96" },                                   // 96
+  { emojis: "🐅🌲🏹", title: "Aayirathil Oruvan" },                   // Aayirathil Oruvan
+  { emojis: "🗡️👸🏻🤴🏻", title: "Baahubali" },                          // Baahubali (technically Telugu, often dubbed in Tamil)
+  { emojis: "👮‍♂️🚨🔥", title: "Kaakha Kaakha" },                      // Kaakha Kaakha
+  { emojis: "🍫👧", title: "Chocolat" },                               // Not Kollywood; placeholder, will get replaced
+  { emojis: "🎤🧑‍🎤🎸", title: "Rockstar" }                            // Not Kollywood; placeholder
+];
+
+// For demo, only these titles will be mapped in Kollywood. Will cross-check via TMDB.
+const HARDCODED_TAMIL_EMOJI_CLUES = [
+  { emojis: "🤖👦💔🚀", tmdb_name: "Enthiran" },
+  { emojis: "🕵️‍♂️🎩🔮", tmdb_name: "Anniyan" },
+  { emojis: "🕺💃❤️🎶", tmdb_name: "Kadhalan" },
+  { emojis: "👧🎨🎬", tmdb_name: "96" },
+  { emojis: "🐅🌲🏹", tmdb_name: "Aayirathil Oruvan" },
+  { emojis: "👮‍♂️🚨🔥", tmdb_name: "Kaakha Kaakha" }
+];
+
 // PUBLIC_INTERFACE
 export default function GameEmojiMovieGuess({ section }) {
-  const [sessionSet, setSessionSet] = useState(() => {
-    // Shuffle and pick unique questions per session
-    const arr = EMOJI_QUESTIONS.slice();
-    for (let i = arr.length - 1; i > 0; --i) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr.slice(0, Math.min(MAX_QUESTIONS, arr.length));
-  });
+  const [sessionSet, setSessionSet] = useState([]);
   const [idx, setIdx] = useState(0); // Current question index
   const [guess, setGuess] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [score, setScore] = useState(0);
   const [msg, setMsg] = useState("");
   const [autoAdvance, setAutoAdvance] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState("");
   const timeoutRef = useRef();
   const navigate = useNavigate();
 
-  const q = sessionSet[idx] || null;
-
+  // Helper to "normalize" answers for match
   function norm(str) {
     return (str || "").toLowerCase().replace(/[^a-z0-9]/gi, "");
   }
+
+  // Only relevant for Kollywood mode (dynamic fetch)
+  useEffect(() => {
+    let ignore = false;
+    async function loadTamilQuestions() {
+      setLoading(true);
+      setFetchError("");
+      try {
+        // Fetch original language Tamil movies; may paginate for more variety
+        let { results } = await getKollywoodOriginalMovies({ page: 1 });
+        // Use only those with title matching our hardcoded clues (case-insensitive substring), to ensure clue maps to real movie
+        let clues = [];
+        for (let mapped of HARDCODED_TAMIL_EMOJI_CLUES) {
+          // Find in TMDB result set a movie matching by romanized title (ignoring case and leading articles)
+          const match = results.find(m => {
+            let romTitle = getRomanizedTitle(m).replace(/^the\s+/i, "").toLowerCase();
+            let mappedName = mapped.tmdb_name.replace(/^the\s+/i, "").toLowerCase();
+            return romTitle.includes(mappedName);
+          });
+          if (match) {
+            clues.push({
+              emojis: mapped.emojis,
+              // Always present as getRomanizedTitle for answer
+              title: getRomanizedTitle(match)
+            });
+          }
+        }
+        // For randomness, shuffle and pick as many as possible, up to MAX_QUESTIONS.
+        for (let i = clues.length - 1; i > 0; --i) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [clues[i], clues[j]] = [clues[j], clues[i]];
+        }
+        if (!ignore) {
+          setSessionSet(clues.slice(0, Math.min(MAX_QUESTIONS, clues.length)));
+          setIdx(0);
+          setScore(0);
+          setGuess("");
+          setRevealed(false);
+          setMsg("");
+          setAutoAdvance(false);
+          setLoading(false);
+        }
+      } catch (e) {
+        if (!ignore) {
+          setFetchError("Failed to load Kollywood emoji clues from TMDB.");
+          setSessionSet([]);
+          setLoading(false);
+        }
+      }
+    }
+
+    // Hollywood mode: use default hardcoded demo set.
+    if (section === "kollywood") {
+      loadTamilQuestions();
+    } else {
+      // Shuffle demo data for Hollywood or default
+      const arr = EMOJI_QUESTIONS.slice();
+      for (let i = arr.length - 1; i > 0; --i) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      setSessionSet(arr.slice(0, Math.min(MAX_QUESTIONS, arr.length)));
+      setIdx(0);
+      setScore(0);
+      setGuess("");
+      setRevealed(false);
+      setMsg("");
+      setAutoAdvance(false);
+      setLoading(false);
+      setFetchError("");
+    }
+    return () => { ignore = true; };
+  }, [section]);
+
+  // Cleanup timer on unmount
+  useEffect(() => () => clearTimeout(timeoutRef.current), []);
+
+  const q = sessionSet[idx] || null;
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -87,23 +189,40 @@ export default function GameEmojiMovieGuess({ section }) {
   }
 
   function handleRestart() {
-    // Start a new session with questions shuffled
-    const arr = EMOJI_QUESTIONS.slice();
-    for (let i = arr.length - 1; i > 0; --i) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
+    // Hard restart: re-trigger loading of sessionSet for Kollywood, re-shuffle for Hollywood
+    if (section === "kollywood") {
+      setSessionSet([]);
+      setIdx(0);
+      setScore(0);
+      setGuess("");
+      setRevealed(false);
+      setMsg("");
+      setAutoAdvance(false);
+      setLoading(false);
+      setFetchError("");
+      // Will re-trigger useEffect and reload
+      setTimeout(() => {
+        // allow useEffect above to fire on section
+        setSessionSet([]);
+      }, 10);
+    } else {
+      // Shuffle demo data for Hollywood
+      const arr = EMOJI_QUESTIONS.slice();
+      for (let i = arr.length - 1; i > 0; --i) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      setSessionSet(arr.slice(0, Math.min(MAX_QUESTIONS, arr.length)));
+      setIdx(0);
+      setScore(0);
+      setGuess("");
+      setRevealed(false);
+      setMsg("");
+      setAutoAdvance(false);
+      setLoading(false);
+      setFetchError("");
     }
-    setSessionSet(arr.slice(0, Math.min(MAX_QUESTIONS, arr.length)));
-    setIdx(0);
-    setGuess("");
-    setRevealed(false);
-    setScore(0);
-    setMsg("");
-    setAutoAdvance(false);
   }
-
-  // Cleanup timer on unmount
-  React.useEffect(() => () => clearTimeout(timeoutRef.current), []);
 
   // Main render logic
   return (
@@ -118,7 +237,7 @@ export default function GameEmojiMovieGuess({ section }) {
           fontWeight: 600
         }}
         onClick={() => navigate(-1)}
-        disabled={autoAdvance}
+        disabled={autoAdvance || loading}
       >
         ← Back
       </button>
@@ -129,7 +248,23 @@ export default function GameEmojiMovieGuess({ section }) {
       }}>
         Score: {score} &nbsp; | &nbsp; Question: {sessionSet.length ? Math.min(idx + 1, sessionSet.length) : 1} / {sessionSet.length || MAX_QUESTIONS}
       </div>
-      {!q ? (
+      {loading ? (
+        <div style={{
+          background: "#fff",
+          color: "#222",
+          borderRadius: 14,
+          textAlign: "center",
+          padding: "30px 16px"
+        }}>Loading Kollywood movies…</div>
+      ) : fetchError ? (
+        <div style={{
+          background: "#fff",
+          color: "#e11",
+          borderRadius: 14,
+          textAlign: "center",
+          padding: "30px 16px"
+        }}>{fetchError}</div>
+      ) : !q ? (
         <div style={{
           background: "#fff",
           color: "#222",

@@ -72,9 +72,14 @@ export default function GameBlurredPoster({ section }) {
         (m) => m.poster_path && !m.adult && m.title
       );
     }
-    // Enforce maximum 18 movies for quiz session
+    // Enforce maximum 18 unique movies for quiz session:
     if (filtered.length > 18) {
-      filtered = filtered.slice(0, 18);
+      // Shuffle and pick 18 random if more than 18
+      filtered = filtered
+        .map((v) => ({ v, sort: Math.random() }))
+        .sort((a, b) => a.sort - b.sort)
+        .map(({ v }) => v)
+        .slice(0, 18);
     }
     let pick = null;
     if (filtered.length) {

@@ -31,20 +31,33 @@ export default function SectionPage({ section }) {
   ];
 
   return (
-    <div className="container" style={{ marginTop: 100 }}>
+    <div className="container" style={{ marginTop: 100, position: "relative" }}>
+      {/* Back to Home Button - visually clear but unobtrusive at the very top */}
       <button
         className="btn"
         style={{
-          background: "#f1e4fa",
+          position: "absolute",
+          top: -52,
+          left: 18,
+          background: "rgba(245,211,255,0.97)",
           color: "#d505ff",
-          border: "1px solid #d505ff55",
-          marginBottom: 18,
-          fontWeight: 600
+          border: "1px solid #d505ff40",
+          fontWeight: 600,
+          borderRadius: 6,
+          boxShadow: "0 2px 14px #d505ff14",
+          fontSize: "1rem",
+          padding: "7px 16px",
+          zIndex: 10,
+          opacity: 0.92,
+          transition: "background 0.16s, box-shadow 0.14s"
         }}
         onClick={() => navigate("/")}
+        aria-label="Back to Home"
       >
-        ← Back
+        <span style={{ fontSize: 21, verticalAlign: "middle", marginRight: 7 }}>←</span>
+        Home
       </button>
+
       {/* Section/game selection interface */}
       <div style={{ fontSize: 26, fontWeight: 700, color: "#d505ff" }}>
         {section === "hollywood" ? "Hollywood" : "Kollywood"} Section

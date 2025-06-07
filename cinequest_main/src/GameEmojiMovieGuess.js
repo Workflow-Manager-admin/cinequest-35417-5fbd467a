@@ -25,27 +25,29 @@ const MAX_QUESTIONS = 8; // How many per game session
  * Emoji clues should be unique per answer and selected for well-known Tamil (Kollywood) movies only.
  */
 const TAMIL_EMOJI_CLUES = [
-  // Some popular Kollywood movies, with unique emoji clues
-  { emojis: "🤖👦💔🚀", title: "Enthiran" },                            // Enthiran
-  { emojis: "🕵️‍♂️🎩🔮", title: "Anniyan" },                           // Anniyan
-  { emojis: "🕺💃❤️🎶", title: "Kadhalan" },                          // Kadhalan
-  { emojis: "🚂💥🦸‍♂️", title: "Chennai Express" },                   // Actually Bollywood; skip in real use
-  { emojis: "👧🎨🎬", title: "96" },                                   // 96
-  { emojis: "🐅🌲🏹", title: "Aayirathil Oruvan" },                   // Aayirathil Oruvan
-  { emojis: "🗡️👸🏻🤴🏻", title: "Baahubali" },                          // Baahubali (technically Telugu, often dubbed in Tamil)
-  { emojis: "👮‍♂️🚨🔥", title: "Kaakha Kaakha" },                      // Kaakha Kaakha
-  { emojis: "🍫👧", title: "Chocolat" },                               // Not Kollywood; placeholder, will get replaced
-  { emojis: "🎤🧑‍🎤🎸", title: "Rockstar" }                            // Not Kollywood; placeholder
+  // Updated: Highly specific, creative emoji clues for Kollywood movies reflecting story, motifs, or iconic scenes.
+  { emojis: "🤖👩‍🔬🔥🌆", title: "Enthiran" }, // Robot, scientist, destruction, city (Chitti the robot, Dr. Vaseegaran, chaos)
+  { emojis: "🧑‍⚖️😡⚖️😈", title: "Anniyan" }, // Lawyer, anger, justice, alter ego/vigilante (Ambi's split personalities, moral rage)
+  { emojis: "🕒⏳👩‍🏫📸", title: "96" }, // Time, nostalgia, teacher, camera (old flames reunite, travel photographer)
+  { emojis: "👑🗡️🌅🏝️", title: "Aayirathil Oruvan" }, // King, sword, sunrise, remote island (lost dynasty quest/adventure)
+  { emojis: "👮‍♂️🔫🌊❤️", title: "Kaakha Kaakha" }, // Cop, gun, sea, love (police officer, beach romance)
+  { emojis: "🐯👶👑🗡️", title: "Asuran" }, // Tiger, child, king/crown, machete (fierce father, revenge, land struggle)
+  { emojis: "🧑‍🍳🍲🍽️🏆", title: "MasterChef" }, // Chef, food, dining, trophy
+  { emojis: "📺👨‍👩‍👧🛋️", title: "Sivaji" }, // TV, family, sofa (home, wealth, family)
+  { emojis: "💃🕺🎤🎵🏆", title: "Kadhalan" }, // Dance, singing, music, trophy (love story, music, college fest)
+  { emojis: "🎭🎬🎤🎸", title: "Vaaranam Aayiram" }, // Drama, film, microphone, guitar (music, drama, life journey)
 ];
-
-// For demo, only these titles will be mapped in Kollywood. Will cross-check via TMDB.
 const HARDCODED_TAMIL_EMOJI_CLUES = [
-  { emojis: "🤖👦💔🚀", tmdb_name: "Enthiran" },
-  { emojis: "🕵️‍♂️🎩🔮", tmdb_name: "Anniyan" },
-  { emojis: "🕺💃❤️🎶", tmdb_name: "Kadhalan" },
-  { emojis: "👧🎨🎬", tmdb_name: "96" },
-  { emojis: "🐅🌲🏹", tmdb_name: "Aayirathil Oruvan" },
-  { emojis: "👮‍♂️🚨🔥", tmdb_name: "Kaakha Kaakha" }
+  { emojis: "🤖👩‍🔬🔥🌆", tmdb_name: "Enthiran" }, // Chitti, Dr. Vaseegaran, action scene
+  { emojis: "🧑‍⚖️😡⚖️😈", tmdb_name: "Anniyan" }, // Split personalities, lawyer, vigilante
+  { emojis: "🕒⏳👩‍🏫📸", tmdb_name: "96" }, // Time, nostalgia, teacher, camera
+  { emojis: "👑🗡️🌅🏝️", tmdb_name: "Aayirathil Oruvan" }, // Lost king, adventure
+  { emojis: "👮‍♂️🔫🌊❤️", tmdb_name: "Kaakha Kaakha" }, // Cop, romance, sea
+  { emojis: "🐯👶👑🗡️", tmdb_name: "Asuran" }, // Fierce, land, legacy, revenge
+  { emojis: "🧑‍🍳🍲🍽️🏆", tmdb_name: "MasterChef" }, // Cooking contest (if found)
+  { emojis: "📺👨‍👩‍👧🛋️", tmdb_name: "Sivaji" }, // TV, family, wealth
+  { emojis: "💃🕺🎤🎵🏆", tmdb_name: "Kadhalan" }, // Dance/music/college
+  { emojis: "🎭🎬🎤🎸", tmdb_name: "Vaaranam Aayiram" } // Life, performance, journey
 ];
 
 // PUBLIC_INTERFACE

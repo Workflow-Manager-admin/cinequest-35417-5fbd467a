@@ -24,8 +24,8 @@ export default function SectionPage({ section }) {
     },
     {
       id: "famous-dialogue-match",
-      title: "Famous Dialogue Match",
-      description: "Match famous movie dialogues to posters.",
+      title: "Guess the Movie from the Emoji",
+      description: "Guess the movie from a sequence of emojis as clues.",
     }
     // Director's Movies Game removed.
   ];

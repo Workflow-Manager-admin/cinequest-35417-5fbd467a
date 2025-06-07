@@ -8,7 +8,7 @@ import SectionPage from "./SectionPage";
 import GameBlurredPoster from "./GameBlurredPoster";
 import GameMovieClipQuiz from "./GameMovieClipQuiz";
 import GameFourImageConnection from "./GameFourImageConnection";
-import GameFamousDialogueMatch from "./GameFamousDialogueMatch";
+import GameEmojiMovieGuess from "./GameEmojiMovieGuess";
 
 function HomePage() {
   const { user } = useAuth();
@@ -166,7 +166,7 @@ function App() {
                 path="/hollywood/famous-dialogue-match"
                 element={
                   <RequireAuth>
-                    <GameFamousDialogueMatch section="hollywood" />
+                    <GameEmojiMovieGuess section="hollywood" />
                   </RequireAuth>
                 }
               />
@@ -199,7 +199,7 @@ function App() {
                 path="/kollywood/famous-dialogue-match"
                 element={
                   <RequireAuth>
-                    <GameFamousDialogueMatch section="kollywood" />
+                    <GameEmojiMovieGuess section="kollywood" />
                   </RequireAuth>
                 }
               />

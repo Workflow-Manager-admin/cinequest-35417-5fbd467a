@@ -26,12 +26,8 @@ export default function SectionPage({ section }) {
       id: "famous-dialogue-match",
       title: "Famous Dialogue Match",
       description: "Match famous movie dialogues to posters.",
-    },
-    {
-      id: "directors-movies",
-      title: "Director's Movies",
-      description: "Select the movies directed by this director.",
-    },
+    }
+    // Director's Movies Game removed.
   ];
 
   return (

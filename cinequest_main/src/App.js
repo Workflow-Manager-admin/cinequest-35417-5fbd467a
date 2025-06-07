@@ -9,7 +9,6 @@ import GameBlurredPoster from "./GameBlurredPoster";
 import GameMovieClipQuiz from "./GameMovieClipQuiz";
 import GameFourImageConnection from "./GameFourImageConnection";
 import GameFamousDialogueMatch from "./GameFamousDialogueMatch";
-import GameDirectorsMovies from "./GameDirectorsMovies";
 
 function HomePage() {
   const { user } = useAuth();
@@ -171,15 +170,6 @@ function App() {
                   </RequireAuth>
                 }
               />
-              <Route
-                path="/hollywood/directors-movies"
-                element={
-                  <RequireAuth>
-                    <GameDirectorsMovies section="hollywood" />
-                  </RequireAuth>
-                }
-              />
-
               {/* Kollywood Games */}
               <Route
                 path="/kollywood/blurred-poster"
@@ -213,15 +203,6 @@ function App() {
                   </RequireAuth>
                 }
               />
-              <Route
-                path="/kollywood/directors-movies"
-                element={
-                  <RequireAuth>
-                    <GameDirectorsMovies section="kollywood" />
-                  </RequireAuth>
-                }
-              />
-
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </main>

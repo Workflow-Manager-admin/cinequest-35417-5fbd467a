@@ -40,7 +40,14 @@ export default function SectionPage({ section }) {
         {section === "hollywood" ? "Hollywood" : "Kollywood"} Section
       </div>
       <div style={{ margin: "14px 0 30px 0", color: "#333" }}>
-        Choose a game below:
+        {section === "kollywood"
+          ? <>
+              Only original Kollywood (Tamil cinema) movies are included –
+              dubbed movies are excluded.
+              <br />
+              Movie answers are always shown in English (Romanized) form for Kollywood.
+            </>
+          : "Choose a game below:"}
       </div>
       <div
         style={{

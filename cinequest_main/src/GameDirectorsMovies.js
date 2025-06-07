@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getPopularMovies, getPersonDetails, getPersonMovieCredits } from "./tmdbApi";
+import { getPopularMovies, getPersonDetails, getPersonMovieCredits, isKollywoodOriginalMovie, getRomanizedTitle } from "./tmdbApi";
 
 // Demo directors: for each section, a notable director (name, TMDB id, sample correct movies)
 const directors = {
@@ -56,20 +56,39 @@ export default function GameDirectorsMovies({ section }) {
         try {
           const r = await getPopularMovies({
             region: section === "kollywood" ? "IN" : "US",
+            language: section === "hollywood" ? "en" : "ta",
+            include_adult: false,
           });
-          const found = (r.results || []).find(
-            m =>
-              m.title.toLowerCase().replace(/[^a-z0-9]/g, "") ===
-              t.toLowerCase().replace(/[^a-z0-9]/g, "")
-          );
+          let results = r.results || [];
+          if (section === "kollywood") {
+            // Only original Tamil movies
+            results = results.filter(isKollywoodOriginalMovie);
+          }
+          // For Kollywood, match both title & Romanized version
+          let found;
+          if (section === "kollywood") {
+            found = results.find(
+              m =>
+                getRomanizedTitle(m)
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]/g, "") ===
+                t.toLowerCase().replace(/[^a-z0-9]/g, "")
+            );
+          } else {
+            found = results.find(
+              m =>
+                m.title.toLowerCase().replace(/[^a-z0-9]/g, "") ===
+                t.toLowerCase().replace(/[^a-z0-9]/g, "")
+            );
+          }
           allOpts.push({
-            title: t,
+            title: section === "kollywood" ? getRomanizedTitle({ title: t, original_title: t }) : t,
             poster_path: found && found.poster_path,
             isCorrect: pick.correctMovies.includes(t)
           });
         } catch {
           allOpts.push({
-            title: t,
+            title: section === "kollywood" ? getRomanizedTitle({ title: t, original_title: t }) : t,
             poster_path: "",
             isCorrect: pick.correctMovies.includes(t)
           });
@@ -177,7 +196,7 @@ export default function GameDirectorsMovies({ section }) {
                 <div style={{
                   fontWeight: 600,
                   fontSize: 13.2
-                }}>{m.title}</div>
+                }}>{section === "kollywood" ? getRomanizedTitle({ title: m.title, original_title: m.title }) : m.title}</div>
               </div>
             ))}
           </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getPopularMovies } from "./tmdbApi";
+import { getPopularMovies, getRomanizedTitle } from "./tmdbApi";
 
 const conceptClues = [
   // For demonstration, simple hardcoded clues
@@ -51,13 +51,17 @@ export default function GameFourImageConnection({ section }) {
   function handleSubmit(e) {
     e.preventDefault();
     if (!current) return;
+    const answer =
+      section === "kollywood"
+        ? getRomanizedTitle({ title: current.title, original_title: current.title })
+        : current.title;
     if (
       userGuess.trim().toLowerCase().replace(/[^a-z0-9]/g, "") ===
-      current.title.toLowerCase().replace(/[^a-z0-9]/g, "")
+      answer.toLowerCase().replace(/[^a-z0-9]/g, "")
     ) {
-      setMsg("🎉 Correct! " + current.title);
+      setMsg("🎉 Correct! " + answer);
     } else {
-      setMsg("❌ Oops! This was: " + current.title);
+      setMsg("❌ Oops! This was: " + answer);
     }
   }
 

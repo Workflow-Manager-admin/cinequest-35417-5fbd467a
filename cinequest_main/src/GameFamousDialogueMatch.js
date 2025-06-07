@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getPopularMovies } from "./tmdbApi";
+import { getPopularMovies, getRomanizedTitle } from "./tmdbApi";
 
 const dialogueDataset = [
   // Example pairs: dialogue -> movie
@@ -67,10 +67,19 @@ export default function GameFamousDialogueMatch({ section }) {
 
   function checkMatch(title) {
     setPicked(title);
-    if (title === pair.movie) {
+    const isKollywood = section === "kollywood";
+    const answer = isKollywood
+      ? getRomanizedTitle({ title: pair.movie, original_title: pair.movie })
+      : pair.movie;
+    const correct = isKollywood
+      ? title === getRomanizedTitle({ title: pair.movie, original_title: pair.movie })
+      : title === pair.movie;
+    if (correct) {
       setResultMsg("🎉 Correct!");
     } else {
-      setResultMsg("❌ Oops, the correct answer was: " + pair.movie);
+      setResultMsg(
+        "❌ Oops, the correct answer was: " + answer
+      );
     }
   }
 
@@ -108,11 +117,33 @@ export default function GameFamousDialogueMatch({ section }) {
               <div
                 key={opt.movie}
                 tabIndex={0}
-                onClick={() => checkMatch(opt.movie)}
-                onKeyDown={e => { if (e.key === "Enter") checkMatch(opt.movie); }}
+                onClick={() => checkMatch(
+                  section === "kollywood"
+                    ? getRomanizedTitle({ title: opt.movie, original_title: opt.movie })
+                    : opt.movie
+                )}
+                onKeyDown={e => {
+                  if (e.key === "Enter") checkMatch(
+                    section === "kollywood"
+                      ? getRomanizedTitle({ title: opt.movie, original_title: opt.movie })
+                      : opt.movie
+                  );
+                }}
                 style={{
-                  background: picked === opt.movie ? "#d505ff" : "#f9f9fb",
-                  color: picked === opt.movie ? "#fff" : "#101",
+                  background: picked === (
+                                      section === "kollywood"
+                                        ? getRomanizedTitle({ title: opt.movie, original_title: opt.movie })
+                                        : opt.movie
+                                    )
+                    ? "#d505ff"
+                    : "#f9f9fb",
+                  color: picked === (
+                                      section === "kollywood"
+                                        ? getRomanizedTitle({ title: opt.movie, original_title: opt.movie })
+                                        : opt.movie
+                                    )
+                    ? "#fff"
+                    : "#101",
                   borderRadius: 10,
                   padding: 14,
                   minWidth: 98,
@@ -142,7 +173,11 @@ export default function GameFamousDialogueMatch({ section }) {
                     alignItems: "center", justifyContent: "center", fontSize: 22
                   }}>🎥</div>
                 )}
-                <div style={{ fontWeight: 500 }}>{opt.movie}</div>
+                <div style={{ fontWeight: 500 }}>
+                  {section === "kollywood"
+                    ? getRomanizedTitle({ title: opt.movie, original_title: opt.movie })
+                    : opt.movie}
+                </div>
               </div>
             ))}
           </div>

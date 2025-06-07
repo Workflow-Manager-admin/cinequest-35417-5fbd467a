@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getPopularMovies } from "./tmdbApi";
+import { getPopularMovies, isKollywoodOriginalMovie, getRomanizedTitle } from "./tmdbApi";
 
 function getSectionRegion(section) {
   return section === "kollywood" ? "IN" : "US";
@@ -21,9 +21,12 @@ export default function GameBlurredPoster({ section }) {
       include_adult: false
     })
       .then(data => {
-        const filtered = (data.results || []).filter(
+        let filtered = (data.results || []).filter(
           m => m.poster_path && !m.adult && m.title
         );
+        if (section === "kollywood") {
+          filtered = filtered.filter(isKollywoodOriginalMovie);
+        }
         // Pick random one
         if (filtered.length) {
           setMovie(filtered[Math.floor(Math.random() * filtered.length)]);
@@ -34,10 +37,13 @@ export default function GameBlurredPoster({ section }) {
   function checkGuess(e) {
     e.preventDefault();
     if (!movie) return;
-    const correct = movie.title.toLowerCase().replace(/[^a-z0-9]/gi, "");
+    let answer = section === "kollywood" ? getRomanizedTitle(movie) : movie.title;
+    const correct = (answer || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/gi, "");
     const userGuess = guess.toLowerCase().replace(/[^a-z0-9]/gi, "");
     if (correct === userGuess) {
-      setMsg("🎉 Correct! This is " + movie.title);
+      setMsg("🎉 Correct! This is " + answer);
     } else {
       setMsg("❌ Incorrect guess.");
     }
@@ -45,7 +51,10 @@ export default function GameBlurredPoster({ section }) {
 
   function revealAnswer() {
     setRevealed(true);
-    setMsg("😇 It's: " + (movie ? movie.title : "N/A"));
+    let answer = movie
+      ? (section === "kollywood" ? getRomanizedTitle(movie) : movie.title)
+      : "N/A";
+    setMsg("😇 It's: " + answer);
   }
 
   return (
@@ -83,7 +92,9 @@ export default function GameBlurredPoster({ section }) {
                 justifyContent: "center",
                 fontSize: 22
               }}>
-                {movie.title}
+                {section === "kollywood"
+                  ? getRomanizedTitle(movie)
+                  : movie.title}
               </div>}
           </div>
 

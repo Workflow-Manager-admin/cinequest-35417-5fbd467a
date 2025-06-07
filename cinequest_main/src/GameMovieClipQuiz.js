@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getPopularMovies } from "./tmdbApi";
+import { getPopularMovies, isKollywoodOriginalMovie, getRomanizedTitle } from "./tmdbApi";
 
 const sampleMovieClips = [
   // For demo, hardcoded sample YT trailers because TMDB doesn't provide direct streaming video URLs from API
@@ -15,7 +15,10 @@ function getSectionMovies(section, cb) {
     language: section === "hollywood" ? "en" : "ta",
     include_adult: false,
   }).then(data => {
-    const m = (data.results || []).filter(m => m.title && m.poster_path);
+    let m = (data.results || []).filter(m => m.title && m.poster_path);
+    if (section === "kollywood") {
+      m = m.filter(isKollywoodOriginalMovie);
+    }
     if (m.length) cb(m);
     else cb([]);
   });
@@ -36,12 +39,12 @@ export default function GameMovieClipQuiz({ section }) {
         const pick = ms[Math.floor(Math.random() * ms.length)];
         setMovie(pick);
         setQuiz({
-          video: sampleMovieClips[Math.floor(Math.random() * sampleMovieClips.length)].video, // YouTube
-          answer: pick.title
+          video: sampleMovieClips[Math.floor(Math.random() * sampleMovieClips.length)].video,
+          answer: section === "kollywood" ? getRomanizedTitle(pick) : pick.title
         });
       } else {
         const sample = sampleMovieClips[Math.floor(Math.random() * sampleMovieClips.length)];
-        setQuiz({ video: sample.video, answer: sample.title });
+        setQuiz({ video: sample.video, answer: section === "kollywood" ? getRomanizedTitle(sample) : sample.title });
         setMovie({ title: sample.title, poster_path: null });
       }
     });

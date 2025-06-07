@@ -1,6 +1,11 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { getPopularMovies, getMovieDetails, getRomanizedTitle } from "./tmdbApi";
+import {
+  getPopularMovies,
+  getMovieDetails,
+  getRomanizedTitle,
+  getKollywoodOriginalMovies
+} from "./tmdbApi";
 
 // Max questions per session
 const MAX_QUESTIONS = 15;
@@ -72,13 +77,21 @@ export default function GameFourImageConnection({ section }) {
     async function buildQuestions() {
       let movies = [];
       try {
-        // Fetch a 'double batch' to avoid poor yield
-        const region = section === "kollywood" ? "IN" : "US";
-        const lang = section === "hollywood" ? "en" : "ta";
-        let res = await getPopularMovies({ region, language: lang, include_adult: false, page: 1 });
-        movies = (res.results || []).filter(
-          m => m.poster_path && m.title && !m.adult
-        );
+        if (section === "kollywood") {
+          // STRICT: Only genuine Kollywood originals via TMDB discover with with_original_language=ta
+          let res = await getKollywoodOriginalMovies({ page: 1 });
+          movies = (res.results || []).filter(
+            (m) => m.poster_path && m.title && !m.adult
+          );
+        } else {
+          // Hollywood logic unchanged
+          const region = "US";
+          const lang = "en";
+          let res = await getPopularMovies({ region, language: lang, include_adult: false, page: 1 });
+          movies = (res.results || []).filter(
+            (m) => m.poster_path && m.title && !m.adult
+          );
+        }
         // Remove duplicates by id
         const seen = new Set();
         movies = movies.filter(m => {
@@ -86,8 +99,7 @@ export default function GameFourImageConnection({ section }) {
           seen.add(m.id);
           return true;
         });
-        // Shuffle and prepare list
-        movies = shuffleArray(movies).slice(0, MAX_QUESTIONS*4); // get more in case some lack 4 stills
+        movies = shuffleArray(movies).slice(0, MAX_QUESTIONS * 4); // get more for filtering
       } catch {
         if (isMounted) {
           setError("Failed to load movies from TMDB.");

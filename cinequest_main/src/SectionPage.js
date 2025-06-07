@@ -32,28 +32,6 @@ export default function SectionPage({ section }) {
 
   return (
     <div className="container" style={{ marginTop: 100 }}>
-      {/* Small Back to Homepage button */}
-      <button
-        className="btn"
-        style={{
-          background: "#fff",
-          color: "#d505ff",
-          border: "1px solid #d505ff99",
-          marginBottom: 6,
-          fontWeight: 600,
-          fontSize: "0.93rem",
-          padding: "7px 14px",
-          borderRadius: "4px",
-          boxShadow: "0 2px 7px #d505ff17",
-          position: "relative",
-          top: "-6px",
-          left: 0
-        }}
-        onClick={() => navigate("/")}
-        aria-label="Back to Homepage"
-      >
-        ← Back to Homepage
-      </button>
       {/* Section/game selection interface */}
       <div style={{ fontSize: 26, fontWeight: 700, color: "#d505ff" }}>
         {section === "hollywood" ? "Hollywood" : "Kollywood"} Section

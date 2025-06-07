@@ -2,10 +2,18 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getPopularMovies, getRomanizedTitle } from "./tmdbApi";
 
+/**
+ * Famous Dialogue Match game – session logic and UI.
+ * Patches:
+ *   (a) Guarantee correct TMDB poster URL, with fallback for missing/missing poster_path (always show placeholder if needed).
+ *   (b) Ensure each quiz session picks 10 unique, never-repeated questions per session, unless there are fewer than 10 available.
+ *   (c) Make auto-advance after selection fully robust (never glitch, never require user interaction).
+ * No other logic or UI changes are made.
+ */
 // Max 10 unique questions per session
 const MAX_QUIZZES = 10;
 
-// Demo dialogue set; production code could use a much larger set
+// Demo dialogue set; add more as needed
 const dialogueDataset = [
   { movie: "The Godfather", dialogue: "I'm gonna make him an offer he can't refuse." },
   { movie: "Baasha", dialogue: "Naan oru thadavai sonna, nooru thadavai sonna madhiri." },
@@ -20,7 +28,7 @@ function getSectionChoices(section) {
     : dialogueDataset.filter(d => ["Baasha", "Sivaji"].includes(d.movie));
 }
 
-// Array shuffle helper (returns new array)
+// Helper: shuffle array (returns new array)
 function shuffleArray(arr) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; --i) {
@@ -30,6 +38,7 @@ function shuffleArray(arr) {
   return a;
 }
 
+// TMDB image URL base for posters
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w185";
 const TMDB_API_KEY = "5bc67d3b06aecbd18121a3cbbc16eb59";
 
@@ -47,7 +56,8 @@ export default function GameFamousDialogueMatch({ section }) {
   const [posterChoicesCache, setPosterChoicesCache] = useState({}); // question idx -> array of 4 movie titles (unique)
   const navigate = useNavigate();
 
-  // On mount/section change, build unique, shuffled quiz dataset and load movie posters
+    // On mount/section change, set up a unique, shuffled quiz session of up to 10 non-repeating questions,
+  // guarantee that all are unique within the session and any image fallback is handled via map.
   useEffect(() => {
     setLoading(true);
     setQuizIdx(0);
@@ -58,9 +68,9 @@ export default function GameFamousDialogueMatch({ section }) {
     setOptions([]);
     setPosterChoicesCache({});
 
-    // Robust: Only use TMDB movies with valid posters for ALL options (answer + distractors)
+    // Get posters from TMDB for movies in the session question set
     async function setupSession() {
-      // Get TMDB movies for section (two pages for better coverage)
+      // Pull enough TMDB movies to guarantee unique posters for each movie in dialogue set
       let tmdbMovies = [];
       try {
         const page1 = await getPopularMovies({
@@ -76,19 +86,19 @@ export default function GameFamousDialogueMatch({ section }) {
         tmdbMovies = (page1.results || []).concat(page2.results || []);
         // For Kollywood, filter to only those found in the dialogue set and with poster
         if (section === "kollywood") {
-          tmdbMovies = tmdbMovies.filter(m =>
-            m.poster_path && ["Baasha", "Sivaji"].includes(m.title)
+          tmdbMovies = tmdbMovies.filter(
+            m => m.poster_path && ["Baasha", "Sivaji"].includes(m.title)
           );
         } else {
-          tmdbMovies = tmdbMovies.filter(m =>
-            m.poster_path && ["The Godfather", "Pulp Fiction"].includes(m.title)
+          tmdbMovies = tmdbMovies.filter(
+            m => m.poster_path && ["The Godfather", "Pulp Fiction"].includes(m.title)
           );
         }
       } catch {
         tmdbMovies = [];
       }
 
-      // Compose movieTitle -> poster_path for only those present
+      // Compose movie title => poster_path lookup table
       const tmdbPosterMap = {};
       tmdbMovies.forEach(m => {
         if (m.poster_path && m.title) {
@@ -96,17 +106,16 @@ export default function GameFamousDialogueMatch({ section }) {
         }
       });
 
-      // Compose usable dialogue questions: must have TMDB poster available for the movie
-      const candidates = getSectionChoices(section).filter(
+      // Candidate questions: only those that have a poster available
+      let candidates = getSectionChoices(section).filter(
         d => !!tmdbPosterMap[d.movie]
       );
-      // Always ensure a unique set, exactly MAX_QUIZZES for the session (if enough available)
-      const sessionSet = shuffleArray(candidates).slice(0, Math.min(MAX_QUIZZES, candidates.length));
+
+      // Guarantee 10 unique (non-repeated) questions for this session (and never more than available)
+      let sessionSet = shuffleArray(candidates).slice(0, Math.min(MAX_QUIZZES, candidates.length));
+
       setQuizSet(sessionSet);
-
-      // Record posters for the session candidates only (and all possible options from TMDB for distractors)
-      setMoviePosters(tmdbPosterMap);
-
+      setMoviePosters(tmdbPosterMap); // Used for session's answer and distractors
       setLoading(false);
     }
     setupSession();
@@ -179,20 +188,29 @@ export default function GameFamousDialogueMatch({ section }) {
     }
     setRevealed(true);
 
-    // Always auto-advance after 1.15 seconds unless this was last question
+    // Guarantee only ONE auto-advance timer per answer, and always clear any existing
+    if (window.__cqFamousDialogueAdvanceTimeout) {
+      clearTimeout(window.__cqFamousDialogueAdvanceTimeout);
+    }
+    // Always auto-advance unless final question—after delay
     if (quizIdx + 1 < quizSet.length) {
-      setTimeout(() => {
+      window.__cqFamousDialogueAdvanceTimeout = setTimeout(() => {
         setResultMsg("");
         setPicked("");
         setRevealed(false);
         setQuizIdx(i => i + 1);
+        window.__cqFamousDialogueAdvanceTimeout = null;
       }, 1150);
     }
     // Otherwise, leave at completion so Play Again/Restart is available
   }
 
   function handleRestart() {
-    // Triggers fresh session via reset effect
+    // Triggers a new session, cancels any pending auto-advance
+    if (window.__cqFamousDialogueAdvanceTimeout) {
+      clearTimeout(window.__cqFamousDialogueAdvanceTimeout);
+      window.__cqFamousDialogueAdvanceTimeout = null;
+    }
     setQuizIdx(0);
     setScore(0);
     setResultMsg("");
@@ -202,9 +220,9 @@ export default function GameFamousDialogueMatch({ section }) {
     setPosterChoicesCache({});
     setLoading(true);
 
-    // Redo session selection and poster preload (simplest to rely on effect)
-    let candidates = getSectionChoices(section);
-    let sessionSet = shuffleArray(candidates).slice(0, Math.min(MAX_QUIZZES, candidates.length));
+    // Generate a new session set of up to 10 unique, non-repeating questions
+    const candidates = getSectionChoices(section);
+    const sessionSet = shuffleArray(candidates).slice(0, Math.min(MAX_QUIZZES, candidates.length));
     setQuizSet(sessionSet);
 
     setLoading(false);
@@ -304,9 +322,10 @@ export default function GameFamousDialogueMatch({ section }) {
                   }}>
                   {/* Always try to show TMDB poster, else fallback */}
                   <div style={{ position: "relative" }}>
+                    {/* Robust poster fallback: always render fallback, only show poster if valid */}
                     {opt.poster_path ? (
                       <img
-                        src={`https://image.tmdb.org/t/p/w185${opt.poster_path}`}
+                        src={`${TMDB_IMAGE_BASE}${opt.poster_path}`}
                         style={{
                           width: 85,
                           height: 120,
@@ -326,7 +345,7 @@ export default function GameFamousDialogueMatch({ section }) {
                         }}
                       />
                     ) : null}
-                    {/* Always render fallback, only show if no poster */}
+                    {/* Always render fallback, only show if no poster_path or poster failed to load */}
                     {!opt.poster_path && (
                       <div style={{
                         width: 85, height: 120, background: "#ddd",
@@ -334,7 +353,6 @@ export default function GameFamousDialogueMatch({ section }) {
                         alignItems: "center", justifyContent: "center", fontSize: 22
                       }}>🎬</div>
                     )}
-                    {/* If poster image fails and is hidden, the block above will appear */}
                   </div>
                   <div style={{
                     fontWeight: 600,

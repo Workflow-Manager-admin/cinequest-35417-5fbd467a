@@ -108,8 +108,6 @@ function HomePage() {
             background: "rgba(255,255,255,0.14)", borderRadius: 8, padding: 10
           }}>
             Login and pick either the Hollywood or Kollywood section. Each offers multiple games: guess movies from blurred posters, connect images, match dialogues, play movie clip quizzes, and select movies for directors!
-            <br />
-            <span style={{color: "#bf40bf"}}>No adult movies included. Movie data powered by TMDB API.</span>
           </div>
         </div>
       </div>

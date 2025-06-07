@@ -123,17 +123,19 @@ function getBestBackdrop(backdrops) {
   return sorted[0]?.file_path || filtered[0]?.file_path || backdrops[0].file_path || null;
 }
 
-// Helper to get 18 session-unique movies (no repeats)
+const MAX_QUESTIONS = 15;
+
+// Helper to get MAX_QUESTIONS session-unique movies (no repeats)
 async function fetchSessionMovies(section) {
   if (section === "kollywood") {
     const data = await getKollywoodOriginalMovies({ page: 1 });
     let movies = (data.results || []).filter(m => m.title && m.poster_path);
-    if (movies.length > 18) movies = movies.slice(0, 18);
+    if (movies.length > MAX_QUESTIONS) movies = movies.slice(0, MAX_QUESTIONS);
     return movies;
   } else {
     const data = await getPopularMovies({ region: "US", language: "en", include_adult: false });
     let movies = (data.results || []).filter(m => m.title && m.poster_path);
-    if (movies.length > 18) movies = movies.slice(0, 18);
+    if (movies.length > MAX_QUESTIONS) movies = movies.slice(0, MAX_QUESTIONS);
     return movies;
   }
 }
@@ -399,7 +401,9 @@ export default function GameMovieClipQuiz({ section }) {
                     </button>
                   </div>
                 </form>
-                <div style={{ marginTop: 16, minHeight: 24 }}>{feedbackMsg}</div>
+                <div style={{ marginTop: 16, minHeight: 24, color: revealed ? "#222" : undefined, fontWeight: revealed ? 600 : undefined }}>
+                  {feedbackMsg}
+                </div>
                 {autoAdvance && (
                   <div style={{ color: "#999", marginTop: 6 }}>Next quiz coming…</div>
                 )}

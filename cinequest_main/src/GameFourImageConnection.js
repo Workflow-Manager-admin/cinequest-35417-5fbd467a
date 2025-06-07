@@ -303,15 +303,29 @@ export default function GameFourImageConnection({ section }) {
               disabled={revealed || autoAdvance}
               autoFocus
             />
-            <button
-              className="btn"
-              style={{
-                background: "#d505ff", color: "#fff",
-                opacity: revealed || autoAdvance ? 0.7 : 1
-              }}
-              type="submit"
-              disabled={revealed || autoAdvance}
-            >Submit</button>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 12 }}>
+              <button
+                className="btn"
+                style={{
+                  background: "#d505ff", color: "#fff",
+                  opacity: revealed || autoAdvance ? 0.7 : 1
+                }}
+                type="submit"
+                disabled={revealed || autoAdvance}
+              >Submit</button>
+              <button
+                className="btn"
+                style={{
+                  background: "#fff",
+                  color: "#d505ff",
+                  border: "1px solid #d505ff",
+                  opacity: revealed || autoAdvance ? 0.5 : 1
+                }}
+                type="button"
+                disabled={revealed || autoAdvance}
+                onClick={handleReveal}
+              >Reveal</button>
+            </div>
           </form>
           <div style={{ marginTop: 13, minHeight: 32 }}>
             {msg}

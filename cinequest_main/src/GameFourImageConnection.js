@@ -205,7 +205,7 @@ export default function GameFourImageConnection({ section }) {
           marginBottom: 18,
           fontWeight: 600,
         }}
-        onClick={() => navigate(-1)}
+        onClick={() => navigate("/section")}
         disabled={loading}
       >
         ← Back

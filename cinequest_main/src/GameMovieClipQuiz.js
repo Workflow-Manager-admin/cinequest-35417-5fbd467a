@@ -39,123 +39,112 @@ function shuffleArray(arr) {
   return a;
 }
 
-// Generate harder questions using TMDB metadata (supporting actors, trivia, etc)
-function generateHardQuestions(movieDetails, section) {
+/**
+ * PUBLIC_INTERFACE
+ * Generates a set of strongly factual/objective quiz questions about the provided movie,
+ * using only TMDB data such as main cast, director, movie name, release year, and genre.
+ * Returns an array of possible question objects.
+ */
+function generateFactualQuestions(movieDetails, section) {
   if (!movieDetails) return [];
   const questions = [];
+  // Ensure title for answer
   const title = section === "kollywood"
     ? getRomanizedTitle(movieDetails)
     : movieDetails.title;
   if (!title) return [];
 
-  // Supporting actor/actress (not just lead)
-  if (movieDetails.credits && movieDetails.credits.cast && movieDetails.credits.cast.length > 2) {
-    // Pick a random supporting actor from 2nd onwards if exists
-    const supporting = shuffleArray(movieDetails.credits.cast.slice(1, 4)).find(c => c && c.name);
-    if (supporting && supporting.name) {
-      questions.push({
-        question: `Which movie features ${supporting.name} as a supporting actor/actress?`,
-        answer: title,
-        type: "supporting"
-      });
-    }
-  }
+  // 1. Ask for the movie title
+  questions.push({
+    question: "What is the title of this movie?",
+    answer: title,
+    type: "title"
+  });
 
-  // Release trivia: country or languages
-  if (movieDetails.production_countries && movieDetails.production_countries.length > 0) {
-    const country = movieDetails.production_countries[0].name;
+  // 2. Ask about the release year
+  if (movieDetails.release_date && movieDetails.release_date.length >= 4) {
+    const year = movieDetails.release_date.slice(0, 4);
     questions.push({
-      question: `Which movie had its main production country as "${country}"?`,
-      answer: title,
-      type: "country"
-    });
-  }
-  if (movieDetails.spoken_languages && movieDetails.spoken_languages.length > 0) {
-    const lang = movieDetails.spoken_languages
-      .map(l => l.english_name)
-      .filter(l => l)[0];
-    if (lang) {
-      questions.push({
-        question: `Which movie was primarily in "${lang}" language?`,
-        answer: title,
-        type: "language"
-      });
-    }
-  }
-  // Release date: give only month/year
-  if (movieDetails.release_date && movieDetails.release_date.length >= 7) {
-    const monthYear = movieDetails.release_date.slice(0, 7);
-    questions.push({
-      question: `Which movie was first released in ${monthYear}? (YYYY-MM)`,
-      answer: title,
-      type: "release-month"
+      question: `In what year was this movie released?`,
+      answer: year,
+      type: "year"
     });
   }
 
-  // "Factual"/"obscure" points: budget/rating
-  if (typeof movieDetails.budget === "number" && movieDetails.budget > 1000000) {
-    const millions = Math.round(movieDetails.budget/1000000);
-    questions.push({
-      question: `Which movie had a budget of about $${millions} million?`,
-      answer: title,
-      type: "budget"
-    });
-  }
-  // Plot-based (obscure) question
-  if (movieDetails.overview && movieDetails.overview.length > 25) {
-    const firstWord = movieDetails.overview.split(" ")[0];
-    questions.push({
-      question: `Which movie has a plot starting with "${firstWord}"?`,
-      answer: title,
-      type: "overview-firstword"
-    });
-  }
-
-  // Fallback: director/genre/lead year
-  // These are easier, but use if above questions unavailable
-  // Director
-  if (movieDetails.credits && movieDetails.credits.crew) {
-    const director = movieDetails.credits.crew.find(
-      c => c.job === "Director"
-    );
+  // 3. Ask for the director's name
+  if (
+    movieDetails.credits &&
+    Array.isArray(movieDetails.credits.crew)
+  ) {
+    const director = movieDetails.credits.crew.find(c => c.job === "Director");
     if (director && director.name) {
       questions.push({
-        question: `Which movie was directed by "${director.name}"?`,
-        answer: title,
+        question: `Who directed this movie?`,
+        answer: director.name,
         type: "director"
       });
     }
   }
-  // Genre
-  if (movieDetails.genres && movieDetails.genres.length) {
-    const genre = movieDetails.genres[0].name;
-    questions.push({
-      question: `Which movie has main genre "${genre}"?`,
-      answer: title,
-      type: "genre"
-    });
-  }
-  // Random movie fact: runtime
-  if (typeof movieDetails.runtime === "number" && movieDetails.runtime > 0) {
-    questions.push({
-      question: `Which movie has a runtime of ${movieDetails.runtime} minutes?`,
-      answer: title,
-      type: "runtime"
-    });
-  }
 
-  // Pure fallback: lead actor/lead actress
-  if (movieDetails.credits && movieDetails.credits.cast && movieDetails.credits.cast.length > 0) {
-    const lead = movieDetails.credits.cast[0].name;
-    if (lead)
+  // 4. Ask for main (lead) actor/character name
+  if (
+    movieDetails.credits &&
+    Array.isArray(movieDetails.credits.cast) &&
+    movieDetails.credits.cast.length > 0
+  ) {
+    const leadCast = movieDetails.credits.cast[0];
+    if (leadCast && leadCast.name) {
+      // Actor name
       questions.push({
-        question: `Which movie starred "${lead}" in the leading role?`,
-        answer: title,
-        type: "lead"
+        question: `Who played the main character in this movie?`,
+        answer: leadCast.name,
+        type: "lead-actor"
       });
+      // Character name (if available and not a generic name)
+      if (leadCast.character && leadCast.character.length > 1 && !/^Self|Himself|Herself$/i.test(leadCast.character)) {
+        questions.push({
+          question: `What is the name of the main character played by ${leadCast.name}?`,
+          answer: leadCast.character,
+          type: "lead-character"
+        });
+      }
+    }
   }
 
-  return shuffleArray(questions); // Mix for variety
+  // 5. Ask about the main genre
+  if (
+    movieDetails.genres &&
+    Array.isArray(movieDetails.genres) &&
+    movieDetails.genres.length > 0
+  ) {
+    const genre = movieDetails.genres[0].name;
+    if (genre) {
+      questions.push({
+        question: `What is the main genre of this movie?`,
+        answer: genre,
+        type: "genre"
+      });
+    }
+  }
+
+  // 6. Ask about the original language
+  if (
+    movieDetails.spoken_languages &&
+    Array.isArray(movieDetails.spoken_languages) &&
+    movieDetails.spoken_languages.length > 0
+  ) {
+    const langName = movieDetails.spoken_languages[0].english_name;
+    if (langName) {
+      questions.push({
+        question: `What is the primary language of this movie?`,
+        answer: langName,
+        type: "language"
+      });
+    }
+  }
+
+  // Shuffle to avoid pattern and add variety
+  return shuffleArray(questions);
 }
 
 const MAX_QUESTIONS = 15;
@@ -234,12 +223,13 @@ export default function GameMovieClipQuiz({ section }) {
       for (let i = 0; i < sceneMovies.length && quizzes.length < MAX_QUESTIONS; ++i) {
         const { movie, details, scenePath } = sceneMovies[i];
         if (!scenePath) continue; // safeguard (shouldn't happen)
-        // Get a hard question for this round
-        const qs = generateHardQuestions(details, section);
-        // fallback: basic question using this movie/scene
+        // Generate a collection of factual questions for this movie
+        const qs = generateFactualQuestions(details, section);
+        // Always fall back to the movie title if no other question is available
         const questionObj = qs.length ? qs[0] : {
           question: "What is the title of this movie?",
-          answer: section === "kollywood" ? getRomanizedTitle(details) : details.title
+          answer: section === "kollywood" ? getRomanizedTitle(details) : details.title,
+          type: "title"
         };
         quizzes.push({
           movie,
